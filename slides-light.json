@@ -1,0 +1,125 @@
+{
+  "meta": {
+    "title": "Code-Driven UX/UI Design",
+    "lang": "zh-TW",
+    "author": "YOUR NAME",
+    "handle": "@YOUR_HANDLE",
+    "date": "2026"
+  },
+  "theme": {
+    "preset": "light"
+  },
+  "slides": [
+    {
+      "type": "cover",
+      "badge": "2026 / Design Talk",
+      "title": "Code-Driven\nUX/UI Design",
+      "subtitle": "用 Claude Code 重新定義設計工作流",
+      "author": "YOUR NAME / YOUR TITLE",
+      "glow": "top-right"
+    },
+    {
+      "type": "list",
+      "label": "Agenda",
+      "title": "Today",
+      "align": "left",
+      "items": [
+        "Why Code × Design?",
+        "工作流程 — 從 Prompt 到 Production",
+        "Live Demo",
+        "設計品質 vs 開發速度",
+        "Takeaways & Q&A"
+      ]
+    },
+    {
+      "type": "cards",
+      "label": "The Problem",
+      "title": "設計與開發之間\n永遠存在鴻溝",
+      "columns": 3,
+      "cards": [
+        { "icon": "01", "title": "設計稿 ≠ 成品", "desc": "Figma 上的完美，到了 Code 總是走樣" },
+        { "icon": "02", "title": "來回溝通成本", "desc": "設計師與工程師的迭代循環耗時費力" },
+        { "icon": "03", "title": "細節遺失", "desc": "動效、間距、互動細節在交接中流失" }
+      ]
+    },
+    {
+      "type": "flow",
+      "label": "The Approach",
+      "title": "直接用 Code 做設計",
+      "subtitle": "透過 AI-assisted coding，讓設計決策直接在程式碼中實現",
+      "steps": [
+        { "name": "Prompt", "desc": "描述意圖" },
+        { "name": "Generate", "desc": "AI 生成" },
+        { "name": "Review", "desc": "即時預覽" },
+        { "name": "Iterate", "desc": "快速迭代" },
+        { "name": "Ship", "desc": "直接上線" }
+      ]
+    },
+    {
+      "type": "stats",
+      "label": "Impact",
+      "title": "數字會說話",
+      "stats": [
+        { "number": "10x", "desc": "原型產出速度" },
+        { "number": "0", "desc": "設計交接落差" },
+        { "number": "100%", "desc": "所見即所得" }
+      ]
+    },
+    {
+      "type": "code",
+      "label": "Live Demo",
+      "title": "Let's Build",
+      "code": [
+        { "type": "prompt", "text": "$" },
+        { "type": "function", "text": " claude" },
+        { "type": "break" },
+        { "type": "comment", "text": "// Prompt:" },
+        { "type": "string", "text": "\"幫我設計一個深色主題的 Dashboard，" },
+        { "type": "string", "text": " 左側 sidebar，頂部 stat cards，" },
+        { "type": "string", "text": " 主區域放一個資料表格，" },
+        { "type": "string", "text": " 風格要 glassmorphism。\"" },
+        { "type": "break" },
+        { "type": "comment", "text": "// Claude Code generates..." }
+      ]
+    },
+    {
+      "type": "steps",
+      "label": "Workflow",
+      "title": "我的設計工作流",
+      "align": "left",
+      "steps": [
+        { "title": "構思 & Prompt", "desc": "用自然語言描述設計需求，包含風格、佈局、互動" },
+        { "title": "即時生成 & 預覽", "desc": "Claude Code 產出完整的 HTML/CSS/JS，瀏覽器即時預覽" },
+        { "title": "對話式迭代", "desc": "「間距再大一點」「換成圓角」— 用對話微調每個細節" },
+        { "title": "Production Ready", "desc": "產出的 Code 直接可以整合進專案，無需額外開發" }
+      ]
+    },
+    {
+      "type": "quote",
+      "badge": "Philosophy",
+      "text": "The best design tool is the one\nthat speaks the same language\nas your product.",
+      "author": "Code-Driven Design",
+      "glow": "bottom-left"
+    },
+    {
+      "type": "cards",
+      "label": "Takeaways",
+      "title": "三個關鍵心得",
+      "columns": 3,
+      "cards": [
+        { "icon": "◈", "title": "Prompt 就是設計稿", "desc": "學會用精確的語言描述設計，比學工具更重要" },
+        { "icon": "◈", "title": "迭代成本趨近於零", "desc": "AI 讓你可以大膽嘗試，每次修改只需幾秒" },
+        { "icon": "◈", "title": "設計即開發", "desc": "消除交接，產出就是最終產品的一部分" }
+      ]
+    },
+    {
+      "type": "end",
+      "badge": "End",
+      "title": "Thank You",
+      "subtitle": "Questions?",
+      "author": "YOUR NAME",
+      "handle": "@YOUR_HANDLE",
+      "glow": "top-right"
+    }
+  ]
+}

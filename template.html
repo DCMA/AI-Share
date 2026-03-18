@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Deck</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* ═══════════════════════════════════════════════════════
+       THEME SYSTEM — presets + custom overrides
+       ═══════════════════════════════════════════════════════ */
+
+    /* Dark (default) */
+    :root, [data-theme="dark"] {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface-2: #1e1e1e;
+      --border: #2a2a2a;
+      --border-hover: #444;
+      --text: #fafafa;
+      --text-secondary: #888;
+      --text-dim: #555;
+      --text-step-num: #333;
+      --accent: #fff;
+      --gradient-1: #e0e0e0;
+      --gradient-2: #a0a0a0;
+      --code-bg: #111;
+      --code-keyword: #c9a0dc;
+      --code-string: #a8cc8c;
+      --code-comment: #555;
+      --code-function: #87c7f4;
+      --code-prompt: #e88388;
+      --glow-color: rgba(255,255,255,0.03);
+      --radius: 16px;
+      --transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Light */
+    [data-theme="light"] {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --surface-2: #f0f0f0;
+      --border: #e0e0e0;
+      --border-hover: #ccc;
+      --text: #111;
+      --text-secondary: #666;
+      --text-dim: #999;
+      --text-step-num: #ddd;
+      --accent: #111;
+      --gradient-1: #333;
+      --gradient-2: #888;
+      --code-bg: #f5f5f5;
+      --code-keyword: #7c3aed;
+      --code-string: #16a34a;
+      --code-comment: #aaa;
+      --code-function: #2563eb;
+      --code-prompt: #dc2626;
+      --glow-color: rgba(0,0,0,0.02);
+    }
+
+    /* Midnight */
+    [data-theme="midnight"] {
+      --bg: #0b0d17;
+      --surface: #12152a;
+      --surface-2: #1a1e38;
+      --border: #252a4a;
+      --border-hover: #3a4070;
+      --text: #e8eaf6;
+      --text-secondary: #7986cb;
+      --text-dim: #3f4580;
+      --text-step-num: #252a4a;
+      --accent: #b388ff;
+      --gradient-1: #b388ff;
+      --gradient-2: #536dfe;
+      --code-bg: #0d1020;
+      --code-keyword: #ce93d8;
+      --code-string: #80cbc4;
+      --code-comment: #3f4580;
+      --code-function: #82b1ff;
+      --code-prompt: #ff8a80;
+      --glow-color: rgba(130,100,255,0.04);
+    }
+
+    /* Warm */
+    [data-theme="warm"] {
+      --bg: #1a1410;
+      --surface: #231c16;
+      --surface-2: #2e241c;
+      --border: #3d3228;
+      --border-hover: #5a4a3a;
+      --text: #f5ebe0;
+      --text-secondary: #a08a74;
+      --text-dim: #5a4a3a;
+      --text-step-num: #3d3228;
+      --accent: #f5c87a;
+      --gradient-1: #f5c87a;
+      --gradient-2: #c4956a;
+      --code-bg: #15100c;
+      --code-keyword: #e0a0c0;
+      --code-string: #b5c97a;
+      --code-comment: #5a4a3a;
+      --code-function: #7ab5e0;
+      --code-prompt: #e08888;
+      --glow-color: rgba(245,200,122,0.03);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       BASE
+       ═══════════════════════════════════════════════════════ */
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       SLIDE ENGINE
+       ═══════════════════════════════════════════════════════ */
+
+    .deck { height: 100vh; width: 100vw; position: relative; }
+
+    .slide {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 6vh 8vw;
+      opacity: 0; transform: translateY(30px);
+      transition: opacity var(--transition), transform var(--transition);
+      pointer-events: none; will-change: opacity, transform;
+    }
+    .slide.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .slide.exit-up { opacity: 0; transform: translateY(-30px); }
+    .slide.content-left { align-items: flex-start; text-align: left; }
+    .slide.content-left h2, .slide.content-left h3 { text-align: left; }
+
+    /* ─── Typography ─── */
+    .slide-number {
+      position: absolute; top: 3vh; right: 4vw;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; color: var(--text-secondary); letter-spacing: 0.1em;
+    }
+
+    h1 { font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; text-align: center; }
+    h2 { font-size: clamp(1.8rem, 4vw, 3.5rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; text-align: center; }
+    h3 { font-size: clamp(1.2rem, 2vw, 1.6rem); font-weight: 500; letter-spacing: -0.01em; line-height: 1.4; }
+    p, li { font-size: clamp(1rem, 1.5vw, 1.25rem); line-height: 1.7; color: var(--text-secondary); }
+
+    .subtitle { font-size: clamp(1rem, 2vw, 1.5rem); font-weight: 300; color: var(--text-secondary); margin-top: 1.5rem; letter-spacing: 0.02em; }
+    .label { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-secondary); margin-bottom: 1rem; }
+    .badge { display: inline-block; padding: 0.35rem 0.9rem; border: 1px solid var(--border); border-radius: 100px; font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); letter-spacing: 0.05em; margin-bottom: 1.5rem; }
+    .divider { width: 60px; height: 2px; background: var(--border); margin: 2rem 0; }
+
+    .gradient-text {
+      background: linear-gradient(135deg, var(--text) 0%, var(--gradient-2) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* ─── Layouts ─── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; width: 100%; max-width: 1000px; margin-top: 3rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; width: 100%; max-width: 1100px; margin-top: 3rem; }
+    .stack { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; max-width: 800px; margin-top: 2rem; }
+
+    /* ─── Cards ─── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 2rem;
+      transition: border-color 0.3s ease, transform 0.3s ease;
+    }
+    .card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+    .card h3 { margin-bottom: 0.75rem; font-size: 1.1rem; color: var(--text); }
+    .card p { font-size: 0.95rem; line-height: 1.6; }
+    .card .icon { font-size: 1.5rem; margin-bottom: 1rem; display: block; }
+
+    /* ─── Code Block ─── */
+    .code-block {
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.5rem 2rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 1.8;
+      color: var(--text-secondary); max-width: 700px; width: 100%; margin-top: 2rem; overflow-x: auto;
+    }
+    .code-block .keyword  { color: var(--code-keyword); }
+    .code-block .string   { color: var(--code-string); }
+    .code-block .comment  { color: var(--code-comment); }
+    .code-block .function { color: var(--code-function); }
+    .code-block .prompt   { color: var(--code-prompt); }
+
+    /* ─── List ─── */
+    .minimal-list { list-style: none; width: 100%; max-width: 700px; }
+    .minimal-list li { padding: 1rem 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; font-size: 1.05rem; }
+    .minimal-list li:last-child { border-bottom: none; }
+    .minimal-list .bullet { width: 6px; height: 6px; background: var(--text-secondary); border-radius: 50%; flex-shrink: 0; }
+
+    /* ─── Stats ─── */
+    .stat { text-align: center; }
+    .stat .number { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+    .stat .desc { margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary); }
+
+    /* ─── Quote ─── */
+    .quote { font-size: clamp(1.2rem, 2.5vw, 1.8rem); font-weight: 300; font-style: italic; color: var(--text-secondary); text-align: center; max-width: 700px; line-height: 1.6; }
+    .quote-author { margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-dim); font-style: normal; }
+
+    /* ─── Flow ─── */
+    .flow { display: flex; align-items: center; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; justify-content: center; }
+    .flow-step { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.5rem; font-size: 0.9rem; text-align: center; min-width: 120px; }
+    .flow-arrow { color: var(--text-step-num); font-size: 1.2rem; }
+
+    /* ─── Steps ─── */
+    .step-card { display: flex; align-items: center; gap: 1.5rem; }
+    .step-num { font-size: 1.8rem; font-weight: 800; color: var(--text-step-num); min-width: 2.5rem; flex-shrink: 0; }
+
+    /* ─── Glow ─── */
+    .glow { position: absolute; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%); pointer-events: none; }
+    .glow-top-right { top: -100px; right: -100px; }
+    .glow-bottom-left { bottom: -100px; left: -100px; }
+
+    /* ─── Image ─── */
+    .slide-image { max-width: 80%; max-height: 50vh; border-radius: var(--radius); border: 1px solid var(--border); margin-top: 2rem; object-fit: contain; }
+
+    /* ─── Split Layout ─── */
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; width: 100%; max-width: 1100px; align-items: center; }
+    .split-text { display: flex; flex-direction: column; gap: 1rem; }
+
+    /* ─── Nav ─── */
+    .nav { position: fixed; bottom: 3vh; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.5rem; z-index: 100; }
+    .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all 0.3s ease; cursor: pointer; border: none; padding: 0; }
+    .nav-dot.active { background: var(--text); width: 24px; border-radius: 3px; }
+    .progress-bar { position: fixed; top: 0; left: 0; height: 2px; background: linear-gradient(90deg, var(--gradient-1), var(--gradient-2)); transition: width var(--transition); z-index: 100; }
+    .keyboard-hint { position: fixed; bottom: 1.5vh; right: 4vw; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--text-step-num); letter-spacing: 0.05em; }
+    .key { display: inline-block; padding: 0.15rem 0.5rem; border: 1px solid var(--text-step-num); border-radius: 4px; margin: 0 0.15rem; }
+
+    /* ─── Theme Switcher ─── */
+    .theme-switcher {
+      position: fixed; top: 2vh; left: 3vw; z-index: 200;
+      display: flex; gap: 6px; opacity: 0.3; transition: opacity 0.3s;
+    }
+    .theme-switcher:hover { opacity: 1; }
+    .theme-btn {
+      width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border);
+      cursor: pointer; transition: transform 0.2s; padding: 0;
+    }
+    .theme-btn:hover { transform: scale(1.3); }
+    .theme-btn[data-theme="dark"]     { background: #0a0a0a; }
+    .theme-btn[data-theme="light"]    { background: #fafafa; }
+    .theme-btn[data-theme="midnight"] { background: #0b0d17; }
+    .theme-btn[data-theme="warm"]     { background: #1a1410; }
+
+    /* ─── Animations ─── */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .slide.active .animate-in { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .slide.active .delay-1 { animation-delay: 0.1s; }
+    .slide.active .delay-2 { animation-delay: 0.2s; }
+    .slide.active .delay-3 { animation-delay: 0.3s; }
+    .slide.active .delay-4 { animation-delay: 0.4s; }
+    .slide.active .delay-5 { animation-delay: 0.5s; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 768px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .slide { padding: 4vh 6vw; }
+      .flow { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+      .split { grid-template-columns: 1fr; gap: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="theme-switcher" id="themeSwitcher">
+    <button class="theme-btn" data-theme="dark" title="Dark"></button>
+    <button class="theme-btn" data-theme="light" title="Light"></button>
+    <button class="theme-btn" data-theme="midnight" title="Midnight"></button>
+    <button class="theme-btn" data-theme="warm" title="Warm"></button>
+  </div>
+
+  <div class="progress-bar" id="progressBar"></div>
+  <div class="deck" id="deck"></div>
+  <nav class="nav" id="nav"></nav>
+  <div class="keyboard-hint"><span class="key">&larr;</span> <span class="key">&rarr;</span> or swipe</div>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════
+       SLIDE DECK ENGINE
+       Edit slides.json to change content. This file is the engine.
+       ═══════════════════════════════════════════════════════ */
+
+    (async function () {
+      const res = await fetch('./slides.json');
+      const data = await res.json();
+      const { meta, theme, slides } = data;
+
+      // Page title
+      document.title = meta.title || 'Slide Deck';
+      document.documentElement.lang = meta.lang || 'en';
+
+      // Theme
+      document.body.setAttribute('data-theme', theme.preset || 'dark');
+      if (theme.custom) {
+        Object.entries(theme.custom).forEach(([k, v]) => {
+          document.documentElement.style.setProperty(`--${k}`, v);
+        });
+      }
+
+      // Theme switcher
+      document.getElementById('themeSwitcher').addEventListener('click', (e) => {
+        const btn = e.target.closest('.theme-btn');
+        if (btn) document.body.setAttribute('data-theme', btn.dataset.theme);
+      });
+
+      const deck = document.getElementById('deck');
+
+      // ─── Slide Renderers ───
+      const pad = (n) => String(n).padStart(2, '0');
+      const nl2br = (s) => (s || '').replace(/\n/g, '<br>');
+      const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+      const renderers = {
+
+        cover(s, i) {
+          return `
+            <div class="slide${i === 0 ? ' active' : ''}" data-slide="${i}">
+              ${s.glow ? `<div class="glow glow-${s.glow}"></div>` : ''}
+              ${s.badge ? `<span class="badge animate-in">${s.badge}</span>` : ''}
+              <h1 class="gradient-text animate-in delay-1">${nl2br(s.title)}</h1>
+              ${s.subtitle ? `<p class="subtitle animate-in delay-2">${s.subtitle}</p>` : ''}
+              <div class="divider animate-in delay-3"></div>
+              ${s.author ? `<p class="animate-in delay-4" style="color: var(--text-dim); font-size: 0.85rem;">${s.author}</p>` : ''}
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        list(s, i) {
+          const items = s.items.map(t => `<li><span class="bullet"></span>${t}</li>`).join('');
+          return `
+            <div class="slide${s.align === 'left' ? ' content-left' : ''}" data-slide="${i}">
+              ${s.label ? `<span class="label animate-in">${s.label}</span>` : ''}
+              <h2 class="animate-in delay-1">${nl2br(s.title)}</h2>
+              <ul class="minimal-list animate-in delay-2">${items}</ul>
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        cards(s, i) {
+          const cols = s.columns || 3;
+          const cards = s.cards.map(c => `
+            <div class="card">
+              <span class="icon">${c.icon || ''}</span>
+              <h3>${c.title}</h3>
+              <p>${c.desc}</p>
+            </div>`).join('');
+          return `
+            <div class="slide" data-slide="${i}">
+              ${s.label ? `<span class="label animate-in">${s.label}</span>` : ''}
+              <h2 class="animate-in delay-1">${nl2br(s.title)}</h2>
+              <div class="grid-${cols} animate-in delay-2">${cards}</div>
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        stats(s, i) {
+          const stats = s.stats.map(st => `
+            <div class="stat">
+              <div class="number gradient-text">${st.number}</div>
+              <div class="desc">${st.desc}</div>
+            </div>`).join('');
+          return `
+            <div class="slide" data-slide="${i}">
+              ${s.label ? `<span class="label animate-in">${s.label}</span>` : ''}
+              <h2 class="animate-in delay-1">${nl2br(s.title)}</h2>
+              <div class="grid-3 animate-in delay-2">${stats}</div>
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        flow(s, i) {
+          const steps = s.steps.map((st, idx) => {
+            const arrow = idx < s.steps.length - 1 ? '<span class="flow-arrow">&rarr;</span>' : '';
+            return `<div class="flow-step">${st.name}<br><small style="color:var(--text-dim)">${st.desc}</small></div>${arrow}`;
+          }).join('');
+          return `
+            <div class="slide" data-slide="${i}">
+              ${s.label ? `<span class="label animate-in">${s.label}</span>` : ''}
+              <h2 class="animate-in delay-1">${nl2br(s.title)}</h2>
+              ${s.subtitle ? `<p class="subtitle animate-in delay-2" style="max-width: 600px;">${s.subtitle}</p>` : ''}
+              <div class="flow animate-in delay-3">${steps}</div>
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        steps(s, i) {
+          const steps = s.steps.map((st, idx) => `
+            <div class="card step-card">
+              <span class="step-num">${pad(idx + 1)}</span>
+              <div>
+                <h3>${st.title}</h3>
+                <p>${st.desc}</p>
+              </div>
+            </div>`).join('');
+          return `
+            <div class="slide${s.align === 'left' ? ' content-left' : ''}" data-slide="${i}">
+              ${s.label ? `<span class="label animate-in">${s.label}</span>` : ''}
+              <h2 class="animate-in delay-1">${nl2br(s.title)}</h2>
+              <div class="stack animate-in delay-2">${steps}</div>
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        code(s, i) {
+          const lines = s.code.map(c => {
+            if (c.type === 'break') return '<br>';
+            return `<span class="${c.type}">${esc(c.text)}</span><br>`;
+          }).join('');
+          return `
+            <div class="slide" data-slide="${i}">
+              ${s.label ? `<span class="label animate-in">${s.label}</span>` : ''}
+              <h2 class="animate-in delay-1">${nl2br(s.title)}</h2>
+              <div class="code-block animate-in delay-2">${lines}</div>
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        quote(s, i) {
+          return `
+            <div class="slide" data-slide="${i}">
+              ${s.glow ? `<div class="glow glow-${s.glow}"></div>` : ''}
+              ${s.badge ? `<span class="badge animate-in">${s.badge}</span>` : ''}
+              <div class="divider animate-in delay-1"></div>
+              <p class="quote animate-in delay-2">"${nl2br(s.text)}"</p>
+              ${s.author ? `<p class="quote-author animate-in delay-3">— ${s.author}</p>` : ''}
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        image(s, i) {
+          return `
+            <div class="slide" data-slide="${i}">
+              ${s.label ? `<span class="label animate-in">${s.label}</span>` : ''}
+              ${s.title ? `<h2 class="animate-in delay-1">${nl2br(s.title)}</h2>` : ''}
+              <img class="slide-image animate-in delay-2" src="${s.src}" alt="${s.alt || ''}" />
+              ${s.caption ? `<p class="animate-in delay-3" style="color: var(--text-dim); font-size: 0.85rem; margin-top: 1rem;">${s.caption}</p>` : ''}
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        split(s, i) {
+          return `
+            <div class="slide" data-slide="${i}">
+              <div class="split animate-in delay-1">
+                <div class="split-text">
+                  ${s.label ? `<span class="label">${s.label}</span>` : ''}
+                  <h2 style="text-align:left">${nl2br(s.title)}</h2>
+                  ${s.body ? `<p>${s.body}</p>` : ''}
+                  ${s.bullets ? `<ul class="minimal-list">${s.bullets.map(b => `<li><span class="bullet"></span>${b}</li>`).join('')}</ul>` : ''}
+                </div>
+                <div>${s.image ? `<img class="slide-image" style="max-width:100%" src="${s.image}" alt="" />` : ''}</div>
+              </div>
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        section(s, i) {
+          return `
+            <div class="slide" data-slide="${i}">
+              ${s.glow ? `<div class="glow glow-${s.glow}"></div>` : ''}
+              ${s.label ? `<span class="label animate-in">${s.label}</span>` : ''}
+              <h1 class="gradient-text animate-in delay-1">${nl2br(s.title)}</h1>
+              ${s.subtitle ? `<p class="subtitle animate-in delay-2">${s.subtitle}</p>` : ''}
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        end(s, i) {
+          return `
+            <div class="slide" data-slide="${i}">
+              ${s.glow ? `<div class="glow glow-${s.glow}"></div>` : ''}
+              ${s.badge ? `<span class="badge animate-in">${s.badge}</span>` : ''}
+              <h1 class="gradient-text animate-in delay-1">${nl2br(s.title)}</h1>
+              ${s.subtitle ? `<p class="subtitle animate-in delay-2">${s.subtitle}</p>` : ''}
+              <div class="divider animate-in delay-3"></div>
+              <p class="animate-in delay-4" style="color: var(--text-dim); font-size: 0.85rem;">
+                ${s.author || ''}${s.handle ? ` &middot; ${s.handle}` : ''}
+              </p>
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        },
+
+        blank(s, i) {
+          return `
+            <div class="slide" data-slide="${i}">
+              ${s.html || ''}
+              <span class="slide-number">${pad(i + 1)}</span>
+            </div>`;
+        }
+      };
+
+      // ─── Render all slides ───
+      deck.innerHTML = slides.map((s, i) => {
+        const render = renderers[s.type] || renderers.blank;
+        return render(s, i);
+      }).join('');
+
+      // ─── Navigation Engine ───
+      const allSlides = [...deck.querySelectorAll('.slide')];
+      const nav = document.getElementById('nav');
+      const progressBar = document.getElementById('progressBar');
+      let current = 0;
+      let isAnimating = false;
+
+      allSlides.forEach((_, i) => {
+        const dot = document.createElement('button');
+        dot.classList.add('nav-dot');
+        if (i === 0) dot.classList.add('active');
+        dot.addEventListener('click', () => goTo(i));
+        dot.setAttribute('aria-label', `Slide ${i + 1}`);
+        nav.appendChild(dot);
+      });
+
+      function updateProgress() {
+        progressBar.style.width = ((current + 1) / allSlides.length) * 100 + '%';
+      }
+
+      function goTo(index) {
+        if (index === current || isAnimating || index < 0 || index >= allSlides.length) return;
+        isAnimating = true;
+        const direction = index > current ? 1 : -1;
+        const prev = allSlides[current];
+        const next = allSlides[index];
+
+        prev.classList.remove('active');
+        prev.classList.add(direction > 0 ? 'exit-up' : '');
+        if (direction < 0) { prev.style.transform = 'translateY(30px)'; prev.style.opacity = '0'; }
+
+        next.style.transform = direction > 0 ? 'translateY(30px)' : 'translateY(-30px)';
+        next.style.opacity = '0';
+
+        requestAnimationFrame(() => {
+          next.classList.add('active');
+          next.style.transform = '';
+          next.style.opacity = '';
+        });
+
+        nav.children[current].classList.remove('active');
+        nav.children[index].classList.add('active');
+        current = index;
+        updateProgress();
+
+        setTimeout(() => {
+          prev.classList.remove('exit-up');
+          prev.style.transform = '';
+          prev.style.opacity = '';
+          isAnimating = false;
+        }, 500);
+      }
+
+      function goNext() { goTo(current + 1); }
+      function goPrev() { goTo(current - 1); }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); goNext(); }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goPrev(); }
+      });
+
+      let touchX = 0, touchY = 0;
+      document.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; });
+      document.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - touchX;
+        const dy = e.changedTouches[0].clientY - touchY;
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) { dx < 0 ? goNext() : goPrev(); }
+      });
+
+      let wheelTimeout;
+      document.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        clearTimeout(wheelTimeout);
+        wheelTimeout = setTimeout(() => { e.deltaY > 0 ? goNext() : goPrev(); }, 50);
+      }, { passive: false });
+
+      updateProgress();
+    })();
+  </script>
+
+</body>
+</html>
