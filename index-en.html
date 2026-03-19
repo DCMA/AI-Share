@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dylan's AI Workflow</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Open+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --surface-2: #F1F5F9;
+      --border: #E2E8F0;
+      --border-hover: #CBD5E1;
+      --text: #0F172A;
+      --text-secondary: #475569;
+      --text-dim: #94A3B8;
+      --primary: #2563EB;
+      --primary-light: #3B82F6;
+      --primary-bg: #EFF6FF;
+      --accent: #F97316;
+      --green: #059669;
+      --code-bg: #F1F5F9;
+      --code-keyword: #7C3AED;
+      --code-string: #059669;
+      --code-comment: #94A3B8;
+      --code-function: #2563EB;
+      --code-prompt: #DC2626;
+      --shadow-sm: 0 1px 2px rgba(15,23,42,0.04);
+      --shadow-md: 0 4px 16px rgba(15,23,42,0.06);
+      --shadow-lg: 0 8px 32px rgba(15,23,42,0.08);
+      --radius: 16px;
+      --transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    html { font-size: 16px; }
+    body {
+      font-family: 'Open Sans', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      overflow: hidden; height: 100vh; width: 100vw;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Engine ─── */
+    .deck { height: 100vh; width: 100vw; position: relative; }
+    .slide {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 2.5vh 3.5vw;
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.45s ease-out;
+      pointer-events: none;
+    }
+    .slide.active { opacity: 1; visibility: visible; pointer-events: auto; }
+    .slide.left { align-items: flex-start; text-align: left; padding-left: 5vw; }
+    .slide.left h2 { text-align: left; }
+
+    /* ─── Typography ─── */
+    .sn {
+      position: absolute; top: 3vh; right: 4vw;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; color: var(--text-dim); letter-spacing: 0.1em;
+    }
+    h1 { font-family: 'Poppins', sans-serif; font-size: clamp(2.8rem, 6vw, 5rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; text-align: center; }
+    h2 { font-family: 'Poppins', sans-serif; font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; text-align: center; }
+    h3 { font-family: 'Poppins', sans-serif; font-size: clamp(1.1rem, 1.6vw, 1.4rem); font-weight: 600; line-height: 1.4; color: var(--text); }
+    p, li { font-size: clamp(1rem, 1.4vw, 1.2rem); line-height: 1.6; color: var(--text-secondary); }
+    .sub { font-size: clamp(1.1rem, 2vw, 1.5rem); font-weight: 300; color: var(--text-secondary); margin-top: 0.75rem; }
+    .label { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--primary); margin-bottom: 0.5rem; font-weight: 500; }
+    .hl { background: linear-gradient(135deg, var(--primary), var(--primary-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .badge { display: inline-block; padding: 0.35rem 0.9rem; background: var(--primary-bg); border: 1px solid #DBEAFE; border-radius: 100px; font-size: 0.72rem; font-family: 'JetBrains Mono', monospace; color: var(--primary); letter-spacing: 0.05em; margin-bottom: 1.25rem; font-weight: 500; }
+    .divider { width: 48px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--primary), var(--primary-light)); margin: 1.25rem 0; }
+
+    /* ─── Layouts ─── */
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; width: 100%; max-width: 92vw; margin-top: 1.5rem; }
+    .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; width: 100%; max-width: 92vw; margin-top: 1.5rem; }
+    .g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; width: 100%; max-width: 92vw; margin-top: 1.5rem; }
+    .g5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; width: 100%; max-width: 92vw; margin-top: 1.5rem; }
+    .stack { display: flex; flex-direction: column; gap: 0.65rem; width: 100%; max-width: 88vw; margin-top: 1rem; }
+
+    /* ─── Cards ─── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem;
+      box-shadow: var(--shadow-sm); cursor: pointer;
+      transition: box-shadow 0.25s ease-out, border-color 0.25s ease-out, transform 0.25s ease-out;
+    }
+    .card:hover { box-shadow: var(--shadow-md); border-color: var(--border-hover); transform: translateY(-2px); }
+    .card h3 { margin-bottom: 0.4rem; }
+    .card p { font-size: 0.88rem; line-height: 1.55; }
+    .card .icon { font-family: 'Poppins', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem; display: block; }
+
+    /* ─── Project Card (special) ─── */
+    .proj-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem;
+      box-shadow: var(--shadow-sm); cursor: pointer;
+      transition: box-shadow 0.25s ease-out, transform 0.25s ease-out;
+      text-align: left;
+    }
+    .proj-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+    .proj-name { font-family: 'Poppins', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+    .proj-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.75rem; }
+    .proj-stats { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .proj-stat {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+      color: var(--text-dim); background: var(--surface-2);
+      padding: 0.2rem 0.5rem; border-radius: 6px;
+    }
+    .proj-stat b { color: var(--text); font-weight: 600; }
+    .proj-tag {
+      display: inline-block; padding: 0.15rem 0.5rem;
+      border-radius: 6px; font-size: 0.65rem; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .tag-swift { background: #FEF3C7; color: #D97706; }
+    .tag-ts { background: #DBEAFE; color: #2563EB; }
+    .tag-go { background: #D1FAE5; color: #059669; }
+    .tag-ongoing { background: #FEE2E2; color: #DC2626; }
+
+    /* ─── Stat big numbers ─── */
+    .stat { text-align: center; }
+    .stat .num {
+      font-family: 'Poppins', sans-serif;
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 700; letter-spacing: -0.03em; line-height: 1;
+      color: var(--primary);
+    }
+    .stat .desc { margin-top: 0.4rem; font-size: 1rem; color: var(--text-secondary); }
+
+    /* ─── List ─── */
+    .mlist { list-style: none; width: 100%; max-width: 700px; }
+    .mlist li { padding: 0.8rem 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 0.85rem; font-size: 1rem; }
+    .mlist li:last-child { border-bottom: none; }
+    .mlist .dot { width: 6px; height: 6px; background: var(--primary); border-radius: 50%; flex-shrink: 0; margin-top: 0.55rem; }
+
+    /* ─── Flow ─── */
+    .flow { display: flex; align-items: center; gap: 0.6rem; margin-top: 1.5rem; flex-wrap: wrap; justify-content: center; }
+    .flow-step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 0.8rem 1.1rem;
+      font-size: 0.85rem; text-align: center; min-width: 100px;
+      box-shadow: var(--shadow-sm);
+    }
+    .flow-step small { color: var(--text-dim); font-size: 0.72rem; }
+    .flow-arr { color: var(--text-dim); font-size: 1rem; }
+
+    /* ─── Step card ─── */
+    .step {
+      display: flex; align-items: center; gap: 1.25rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .step-n { font-family: 'Poppins', sans-serif; font-size: 1.3rem; font-weight: 700; color: #DBEAFE; min-width: 2rem; }
+    .step h3 { font-size: 1.05rem; font-weight: 500; }
+    .step p { font-size: 0.92rem; }
+
+    /* ─── Code ─── */
+    .code-block {
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.25rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; line-height: 1.7;
+      color: var(--text-secondary); max-width: 650px; width: 100%; margin-top: 1.5rem;
+    }
+
+    /* ─── Quote ─── */
+    .quote { font-family: 'Poppins', sans-serif; font-size: clamp(1.1rem, 2.2vw, 1.6rem); font-weight: 300; font-style: italic; color: var(--text-secondary); text-align: center; max-width: 650px; line-height: 1.7; }
+    .quote-author { margin-top: 1rem; font-size: 0.82rem; color: var(--text-dim); font-style: normal; }
+
+    /* ─── Glow ─── */
+    .glow { position: absolute; width: 500px; height: 500px; border-radius: 50%; pointer-events: none; opacity: 0.5; }
+    .glow-tr { top: -200px; right: -150px; background: radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 70%); }
+    .glow-bl { bottom: -200px; left: -150px; background: radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 70%); }
+
+    /* ─── Highlight box ─── */
+    .highlight-box {
+      background: var(--primary-bg); border: 1px solid #DBEAFE;
+      border-radius: 12px; padding: 1rem 1.5rem;
+      font-size: 1rem; color: var(--primary); text-align: center;
+      font-weight: 500; margin-top: 1.5rem; max-width: 600px;
+    }
+
+    /* ─── Nav ─── */
+    .nav { position: fixed; bottom: 3vh; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.4rem; z-index: 100; }
+    .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); border: none; padding: 0; transition: all 0.3s ease-out; cursor: pointer; }
+    .nav-dot.active { background: var(--primary); width: 20px; border-radius: 3px; }
+    .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--primary), var(--primary-light)); transition: width var(--transition); z-index: 100; border-radius: 0 2px 2px 0; }
+    .kb-hint { position: fixed; bottom: 1.5vh; right: 4vw; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-dim); }
+    .key { display: inline-block; padding: 0.1rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; margin: 0 0.1rem; background: var(--surface); }
+
+    /* ─── Animations ─── */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .slide.active .ai { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .slide.active .d1 { animation-delay: 0.06s; }
+    .slide.active .d2 { animation-delay: 0.12s; }
+    .slide.active .d3 { animation-delay: 0.18s; }
+    .slide.active .d4 { animation-delay: 0.24s; }
+    .slide.active .d5 { animation-delay: 0.30s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .card, .proj-card, .step, .flow-step, .nav-dot { transition: none !important; }
+      .slide.active .ai { animation: none !important; opacity: 1; transform: none; }
+    }
+    @media (max-width: 768px) {
+      .g2, .g3, .g4, .g5 { grid-template-columns: 1fr; }
+      .slide { padding: 2vh 3vw; }
+      .flow { flex-direction: column; }
+      .flow-arr { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="deck" id="deck">
+
+<!-- ═══ 01 Cover ═══ -->
+<div class="slide active" data-slide="0">
+  <div class="glow glow-tr"></div>
+  <span class="badge ai">2026 / Internal Sharing</span>
+  <h1 class="ai d1">Dylan's <span class="hl">AI Workflow</span></h1>
+  <p class="sub ai d2">How I use AI to amplify output</p>
+  <div class="divider ai d3"></div>
+  <div class="ai d4" style="display:flex; align-items:center; gap:0.75rem;">
+    <img src="assets/profile-dylan.png" style="width:64px; height:64px; border-radius:50%; object-fit:cover; box-shadow: var(--shadow-md);" alt="Dylan">
+    <span style="color: var(--text-dim); font-size: 0.9rem;">Dylan</span>
+  </div>
+  <span class="sn">01</span>
+</div>
+
+<!-- ═══ 02 What happened in 14 days ═══ -->
+<div class="slide" data-slide="1">
+  <span class="label ai">Past 14 days</span>
+  <h2 class="ai d1">What did I build <span class="hl">in the past 14 days?</span></h2>
+  <div class="g3 ai d2">
+    <div class="stat">
+      <div class="num">5</div>
+      <div class="desc">Side Projects</div>
+    </div>
+    <div class="stat">
+      <div class="num">393+</div>
+      <div class="desc">Git Commits</div>
+    </div>
+    <div class="stat">
+      <div class="num">66K+</div>
+      <div class="desc">Lines of Code</div>
+    </div>
+  </div>
+  <div class="highlight-box ai d3">All done by one person + AI</div>
+  <span class="sn">02</span>
+</div>
+
+<!-- ═══ 03 Project Overview ═══ -->
+<div class="slide" data-slide="2">
+  <span class="label ai">Projects</span>
+  <h2 class="ai d1">Five projects, two weeks</h2>
+  <div class="g5 ai d2">
+
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="proj-tag tag-swift">Swift</span>
+      </div>
+      <div class="proj-name">Easy Recording</div>
+      <div class="proj-desc">AI meeting recorder & transcript — real-time transcription + auto meeting notes</div>
+      <div class="proj-stats">
+        <span class="proj-stat"><b>92</b>&nbsp;commits</span>
+        <span class="proj-stat"><b>4</b>&nbsp;days</span>
+        <span class="proj-stat"><b>40K</b>&nbsp;LOC</span>
+      </div>
+    </div>
+
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="proj-tag tag-swift">Swift</span>
+      </div>
+      <div class="proj-name">BlaBlaFix</div>
+      <div class="proj-desc">Privacy-first on-device voice input — local Whisper + LLM text refinement</div>
+      <div class="proj-stats">
+        <span class="proj-stat"><b>68</b>&nbsp;commits</span>
+        <span class="proj-stat"><b>7</b>&nbsp;days</span>
+        <span class="proj-stat"><b>3.7K</b>&nbsp;LOC</span>
+      </div>
+    </div>
+
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="proj-tag tag-swift">Swift</span>
+      </div>
+      <div class="proj-name">NearbySpot</div>
+      <div class="proj-desc">Smart driving companion — auto voice alerts when approaching saved spots</div>
+      <div class="proj-stats">
+        <span class="proj-stat"><b>74</b>&nbsp;commits</span>
+        <span class="proj-stat"><b>5</b>&nbsp;days</span>
+        <span class="proj-stat"><b>5.8K</b>&nbsp;LOC</span>
+      </div>
+    </div>
+
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="proj-tag tag-ts">TS</span>
+        <span class="proj-tag tag-go" style="margin-left:4px">Go</span>
+      </div>
+      <div class="proj-name">ezRental</div>
+      <div class="proj-desc">AI rental management — auto tenant replies, booking, LINE Bot</div>
+      <div class="proj-stats">
+        <span class="proj-stat"><b>159</b>&nbsp;commits</span>
+        <span class="proj-stat"><b>2</b>&nbsp;days</span>
+        <span class="proj-stat"><b>16K</b>&nbsp;LOC</span>
+      </div>
+    </div>
+
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="proj-tag tag-ongoing">ONGOING</span>
+      </div>
+      <div class="proj-name">G-Bro</div>
+      <div class="proj-desc">Giant 百科 Encyclopedia</div>
+      <div class="proj-stats">
+        <span class="proj-stat">In progress</span>
+      </div>
+    </div>
+
+  </div>
+  <span class="sn">03</span>
+</div>
+
+<!-- ═══ 04 EasyRecording ═══ -->
+<div class="slide left" data-slide="3">
+  <span class="label ai">Project 01</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-easyrecording.png" style="width:56px; height:56px; border-radius:12px; box-shadow: var(--shadow-md);" alt="Easy Recording icon"> Easy Recording</h2>
+  <p class="sub ai d2" style="margin-top:0.5rem">macOS AI Meeting Recording Assistant</p>
+  <div class="g2 ai d3" style="max-width:88vw">
+    <div class="card">
+      <span class="icon">Features</span>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.3rem;">
+        <li style="font-size:1rem;">System audio + mic simultaneous recording</li>
+        <li style="font-size:1rem;">Real-time speech-to-text (AssemblyAI)</li>
+        <li style="font-size:1rem;">GPT-4.1 auto meeting notes & Action Items</li>
+        <li style="font-size:1rem;">Live AI chat during recording</li>
+        <li style="font-size:1rem;">GitHub-synced notes</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="icon">Stats</span>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+        <div class="stat"><div class="num" style="font-size:2.4rem">92</div><div class="desc">commits</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">4</div><div class="desc">days to ship core</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">40K+</div><div class="desc">lines of code</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">14</div><div class="desc">days iterating</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="sn">04</span>
+</div>
+
+<!-- ═══ 05 BlaBlaFix ═══ -->
+<div class="slide left" data-slide="4">
+  <span class="label ai">Project 02</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-blablafix.png" style="width:56px; height:56px; border-radius:12px; box-shadow: var(--shadow-md);" alt="BlaBlaFix icon"> BlaBlaFix</h2>
+  <p class="sub ai d2" style="margin-top:0.5rem">Privacy-first On-Device Voice Input — a TypeLess clone</p>
+  <div class="g2 ai d3" style="max-width:88vw">
+    <div class="card">
+      <span class="icon">Features</span>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.3rem;">
+        <li style="font-size:1rem;">On-device WhisperKit speech recognition</li>
+        <li style="font-size:1rem;">MLX-Swift + Qwen2.5 local text refinement</li>
+        <li style="font-size:1rem;">Fully offline, no data uploaded</li>
+        <li style="font-size:1rem;">Custom hotkeys + auto-type into any app</li>
+        <li style="font-size:1rem;">macOS platform</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="icon">Stats</span>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+        <div class="stat"><div class="num" style="font-size:2.4rem">68</div><div class="desc">commits</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">7</div><div class="desc">days to ship core</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">3.7K</div><div class="desc">lines of code</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">14</div><div class="desc">days iterating</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="sn">05</span>
+</div>
+
+<!-- ═══ 06 NearbySpot ═══ -->
+<div class="slide left" data-slide="5">
+  <span class="label ai">Project 03</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-nearbyspot.png" style="width:56px; height:56px; border-radius:12px; box-shadow: var(--shadow-md);" alt="NearbySpot icon"> NearbySpot</h2>
+  <p class="sub ai d2" style="margin-top:0.5rem">Hey, stop forgetting!</p>
+  <div class="g2 ai d3" style="max-width:88vw">
+    <div class="card">
+      <span class="icon">Features</span>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.3rem;">
+        <li style="font-size:1rem;">Auto-parse coordinates from Google Maps URLs</li>
+        <li style="font-size:1rem;">Custom-distance geofence alerts</li>
+        <li style="font-size:1rem;">Driving mode (full-screen large text)</li>
+        <li style="font-size:1rem;">Full CI/CD pipeline with TestFlight deployment</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="icon">Stats</span>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+        <div class="stat"><div class="num" style="font-size:2.4rem">74</div><div class="desc">commits</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">5</div><div class="desc">days to ship</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">5.8K</div><div class="desc">lines of code</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">0</div><div class="desc">lines hand-written</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="sn">06</span>
+</div>
+
+<!-- ═══ NearbySpot Story ═══ -->
+<div class="slide" data-slide="6">
+  <span class="label ai">NearbySpot Story</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-nearbyspot.png" style="width:48px; height:48px; border-radius:10px; box-shadow: var(--shadow-md);" alt=""> Why NearbySpot?</h2>
+  <p class="sub ai d2" style="margin-top:0.3rem">How many restaurants live forever on your bucket list?</p>
+  <div class="g2 ai d3" style="max-width:92vw; margin-top:1rem; align-items:center;">
+    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+      <div class="step">
+        <span class="step-n">😩</span>
+        <div><h3>We've all been there</h3><p>A friend recommends a restaurant. You say "Sure!", save it to Google Maps. But every time you drive past, you never remember.</p></div>
+      </div>
+      <div class="step">
+        <span class="step-n">💡</span>
+        <div><h3>An app I've wanted for years</h3><p>Notify me automatically when I'm near a saved spot — no more bucket list limbo.</p></div>
+      </div>
+      <div class="step">
+        <span class="step-n">🔨</span>
+        <div><h3>Nobody built it? I'll do it myself!</h3><p>Since nobody made it, I just built it.</p></div>
+      </div>
+      <div class="highlight-box" style="margin-top:0.25rem;">Thanks to Cena/Cinna for the reminder: perfect for travel — save all the places you want to visit!</div>
+    </div>
+    <div style="display:flex; justify-content:center;">
+      <img src="assets/nearbyspot-promo.png" style="max-height:55vh; max-width:100%; border-radius:16px; box-shadow: var(--shadow-lg); object-fit:contain;" alt="NearbySpot promo">
+    </div>
+  </div>
+  <span class="sn">07</span>
+</div>
+
+<!-- ═══ ezRental ═══ -->
+<div class="slide left" data-slide="7">
+  <span class="label ai">Project 04</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-ezrental.svg" style="width:56px; height:56px; border-radius:12px; box-shadow: var(--shadow-md);" alt="ezRental icon"> ezRental</h2>
+  <p class="sub ai d2" style="margin-top:0.5rem">AI-Powered Rental Management System</p>
+  <div class="g2 ai d3" style="max-width:88vw">
+    <div class="card">
+      <span class="icon">Features</span>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.3rem;">
+        <li style="font-size:1rem;">AI auto-reply to tenants (LINE / Email / Web)</li>
+        <li style="font-size:1rem;">Self-service booking + Google Calendar sync</li>
+        <li style="font-size:1rem;">Multi-property management</li>
+        <li style="font-size:1rem;">Q&A auto-learning knowledge base</li>
+        <li style="font-size:1rem;">Landlord CLI management tool</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="icon">Stats</span>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+        <div class="stat"><div class="num" style="font-size:2.4rem">159</div><div class="desc">commits</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">2</div><div class="desc">days to ship</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">16K</div><div class="desc">lines of code</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">166</div><div class="desc">test cases</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="sn">08</span>
+</div>
+
+<!-- ═══ ezRental Story (part 1) ═══ -->
+<div class="slide left" data-slide="8">
+  <span class="label ai">ezRental Story</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-ezrental.svg" style="width:48px; height:48px; border-radius:10px; box-shadow: var(--shadow-md);" alt=""> How ezRental was born</h2>
+  <p class="sub ai d2" style="margin-top:0.5rem">One weekend, one mother-in-law's headache</p>
+  <div class="stack ai d3" style="max-width:88vw">
+    <div class="step">
+      <span class="step-n">!</span>
+      <div><h3>The problem</h3><p>My mother-in-law had a rental unit. The previous tenant left. Every time she posted it online, tons of people flooded her LINE — scheduling viewings and answering questions was a nightmare.</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">?</span>
+      <div><h3>Two goals</h3><p>① Stop wasting time scheduling viewings &nbsp; ② Auto-answer questions on LINE</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">→</span>
+      <div><h3>Just build it</h3><p>"Can we build something for this?" — And so, in one weekend, ezRental was born.</p></div>
+    </div>
+  </div>
+  <span class="sn">09</span>
+</div>
+
+<!-- ═══ ezRental Story (part 2) ═══ -->
+<div class="slide" data-slide="9">
+  <span class="label ai">ezRental Story</span>
+  <h2 class="ai d1">Once I started, I couldn't stop</h2>
+  <div class="flow ai d2">
+    <div class="flow-step">Landing Page<br><small>Property photos</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">LINE Bot + AI<br><small>Auto Q&A</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">Google Calendar<br><small>Self-service booking</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">Knowledge Base<br><small>Auto-learning</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">Property Mgmt<br><small>Multi-unit</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">CI/CD<br><small>Auto deploy</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">RWD<br><small>Responsive design</small></div>
+  </div>
+  <div class="g2 ai d3" style="max-width:80vw; margin-top:1.5rem;">
+    <div class="card" style="text-align:center">
+      <div class="stat"><div class="num" style="font-size:2.4rem">&lt; 12hr</div><div class="desc">Actual dev time</div></div>
+      <p style="margin-top:0.5rem;">One weekend, half the time spent with family</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="stat"><div class="num" style="font-size:2.4rem; color: var(--accent);">😅</div><div class="desc">The awkward ending</div></div>
+      <p style="margin-top:0.5rem;">The day after I finished, the old tenant decided to stay</p>
+    </div>
+  </div>
+  <div class="highlight-box ai d4">System is on standby — feel free to use it if you need it!</div>
+  <span class="sn">10</span>
+</div>
+
+<!-- ═══ Daily Workflow ═══ -->
+<div class="slide" data-slide="10">
+  <span class="label ai">Daily Workflow</span>
+  <h2 class="ai d1">Daily Workflow</h2>
+  <p class="sub ai d2"><span class="hl">Talk, Don't Type</span></p>
+  <div class="g2 ai d4" style="max-width:80vw">
+    <div class="card" style="text-align:center">
+      <h3>Voice Input</h3>
+      <p>Dictate with TypeLess or BlaBlaFix — AI refines and outputs</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>Driving Time</h3>
+      <p>ChatGPT Voice / Gemini Live for discussions, Voice Memo for email drafts</p>
+    </div>
+  </div>
+  <p class="ai d5" style="color: var(--text-dim); font-size: 0.85rem; margin-top: 1rem; font-family: 'JetBrains Mono', monospace;">Speaking 120–160 WPM ｜ Typing 40–60 WPM</p>
+  <span class="sn">11</span>
+</div>
+
+<!-- ═══ Office Work ═══ -->
+<div class="slide" data-slide="11">
+  <span class="label ai">Office Work</span>
+  <h2 class="ai d1">Office Work</h2>
+  <div class="g4 ai d2">
+    <div class="card">
+      <h3>Emails</h3>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.4rem; margin-top:0.5rem;">
+        <li style="font-size:1rem;">Dedicated MyGPT: different tone for different audiences</li>
+        <li style="font-size:1rem;">Trained persona for writing emails</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Excel Hell</h3>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.4rem; margin-top:0.5rem;">
+        <li style="font-size:1rem;">Cowork for expense reports</li>
+        <li style="font-size:1rem;">Cowork for timesheets</li>
+        <li style="font-size:1rem;">Cowork for any Excel task</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Slides</h3>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.4rem; margin-top:0.5rem;">
+        <li style="font-size:1rem;">Claude Code generates slides</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Meetings</h3>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.4rem; margin-top:0.5rem;">
+        <li style="font-size:1rem;">Easy Recording</li>
+        <li style="font-size:1rem;">Meeting Notes</li>
+        <li style="font-size:1rem;">Real-time AI meeting Q&A</li>
+      </ul>
+    </div>
+  </div>
+  <div class="highlight-box ai d3">Tips: Make good use of AI tools' Projects feature to group related topics together</div>
+  <span class="sn">12</span>
+</div>
+
+<!-- ═══ Tools ═══ -->
+<div class="slide" data-slide="12">
+  <span class="label ai">Tools</span>
+  <h2 class="ai d1">My Toolkit</h2>
+  <div class="g2 ai d2" style="max-width:88vw">
+    <div class="card">
+      <h3>Claude Code</h3>
+      <p>Primary local dev tool, terminal-based multi-tasking workflow</p>
+    </div>
+    <div class="card">
+      <h3>OpenClaw (Lobster)</h3>
+      <p>Best personal assistant</p>
+    </div>
+    <div class="card">
+      <h3>NotebookLM</h3>
+      <p>Quick data synthesis, best knowledge base</p>
+      <p style="margin-top:0.4rem; color:var(--primary); font-size:0.9rem; font-weight:500;">Tip: Medical info management</p>
+    </div>
+    <div class="card">
+      <h3>AI-Chat</h3>
+      <p>Claude / Gemini / ChatGPT</p>
+    </div>
+  </div>
+  <span class="sn">13</span>
+</div>
+
+<!-- ═══ Dev Workflow ═══ -->
+<div class="slide" data-slide="13">
+  <span class="label ai">Dev Workflow</span>
+  <h2 class="ai d1">Dev Workflow</h2>
+  <div class="g2 ai d2" style="max-width:88vw">
+    <div class="card">
+      <h3>Parallel Execution</h3>
+      <ul class="mlist">
+        <li><span class="dot"></span>Up to 4 projects simultaneously</li>
+        <li><span class="dot"></span>While A runs, do B; while B runs, do C</li>
+        <li><span class="dot"></span>Terminal tool: CMUX</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>My Tips</h3>
+      <ul class="mlist">
+        <li><span class="dot"></span>Decide tech architecture first</li>
+        <li><span class="dot"></span>Generate a base project first</li>
+        <li><span class="dot"></span>Set up CI/CD first</li>
+        <li><span class="dot"></span>Turn completed work into a Skill for reuse</li>
+        <li><span class="dot"></span>Leverage Worktree</li>
+      </ul>
+    </div>
+  </div>
+  <span class="sn">14</span>
+</div>
+
+<!-- ═══ Bug Fix Example ═══ -->
+<div class="slide" data-slide="14">
+  <span class="label ai">Bug Fix Example</span>
+  <h2 class="ai d1">Parallel Bug Fixes — BPM Project Example</h2>
+  <p class="sub ai d2" style="margin-top:0.3rem">Multiple bugs, fixed simultaneously, zero conflicts</p>
+  <div class="g2 ai d3" style="max-width:90vw; margin-top:1rem;">
+
+    <div class="card" style="padding:1.25rem;">
+      <h3 style="text-align:center; margin-bottom:0.75rem;"><span style="background:#DBEAFE; color:#2563EB; padding:0.2rem 0.6rem; border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:0.85rem;">GBPM-111</span></h3>
+      <div style="display:flex; flex-direction:column; gap:0.4rem;">
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem;"><code style="color:var(--primary)">claude --worktree</code> Bug-111</div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:#EFF6FF; border-color:#BFDBFE;">Worktree Hook<br><small style="color:var(--primary)">Claude auto-creates env</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:#EFF6FF; border-color:#BFDBFE;">MCP reads bug description<br><small style="color:var(--primary)">Claude auto-fetches Jira</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:#EFF6FF; border-color:#BFDBFE;">Claude fixes bug<br><small style="color:var(--primary)">Auto code + tests</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem;">Notify Dylan<br><small>Awaiting verification</small></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:1.25rem;">
+      <h3 style="text-align:center; margin-bottom:0.75rem;"><span style="background:#FEF3C7; color:#D97706; padding:0.2rem 0.6rem; border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:0.85rem;">GBPM-222</span></h3>
+      <div style="display:flex; flex-direction:column; gap:0.4rem;">
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem;"><code style="color:var(--primary)">claude --worktree</code> Bug-222</div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:#EFF6FF; border-color:#BFDBFE;">Worktree Hook<br><small style="color:var(--primary)">Claude auto-creates env</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:#EFF6FF; border-color:#BFDBFE;">MCP reads bug description<br><small style="color:var(--primary)">Claude auto-fetches Jira</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:#EFF6FF; border-color:#BFDBFE;">Claude fixes bug<br><small style="color:var(--primary)">Auto code + tests</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem;">Notify Dylan<br><small>Awaiting verification</small></div>
+      </div>
+    </div>
+
+  </div>
+  <div style="display:flex; justify-content:center; margin-top:0.4rem;" class="ai d4">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:0.2rem;">
+      <div style="display:flex; gap:3rem; color:var(--text-dim); font-size:1rem;">
+        <span>↘</span><span>↙</span>
+      </div>
+      <div class="flow-step" style="min-width:220px; padding:0.6rem 1.5rem; font-size:1rem; background:var(--primary-bg); border:2px solid var(--primary); font-weight:600; color:var(--primary);">Dylan Verify</div>
+    </div>
+  </div>
+  <span class="sn">15</span>
+</div>
+
+<!-- ═══ OpenClaw (Lobster) ═══ -->
+<div class="slide" data-slide="15">
+  <span class="label ai">OpenClaw</span>
+  <h2 class="ai d1">OpenClaw (Lobster): AI on demand, anywhere</h2>
+  <p class="sub ai d2">Develop while driving, showering, or on the toilet</p>
+  <div style="display:grid; grid-template-columns: 1fr auto; gap:1.5rem; align-items:center; max-width:92vw; margin-top:1rem;" class="ai d3">
+    <div>
+      <div class="card" style="margin-bottom:0.5rem;">
+        <h3 style="margin-bottom:0.75rem;">Lobster Dev Flow (NearbySpot example)</h3>
+        <div class="flow" style="margin-top:0;">
+          <div class="flow-step">Drive & Test<br><small>Found a bug</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">Screenshot<br><small>Send to Lobster</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">Lobster fixes code<br><small>Auto push</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">TestFlight<br><small>New build</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">Install & Test<br><small>Verify fix</small></div>
+        </div>
+        <div class="highlight-box" style="margin-top:0.75rem;">From start to finish, I didn't write a single line of code</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+      <img src="assets/lobster-chat.png" style="height:48vh; border-radius:12px; box-shadow:var(--shadow-lg); object-fit:contain;" alt="Lobster chat screenshot">
+      <img src="assets/lobster-testflight.png" style="height:48vh; border-radius:12px; box-shadow:var(--shadow-lg); object-fit:contain;" alt="TestFlight builds">
+    </div>
+  </div>
+  <span class="sn">16</span>
+</div>
+
+<!-- ═══ OpenClaw Personal Assistant ═══ -->
+<div class="slide" data-slide="16">
+  <span class="label ai">OpenClaw — Personal</span>
+  <h2 class="ai d1">OpenClaw (Lobster) Personal Assistant</h2>
+  <div class="g3 ai d2">
+    <div class="card" style="text-align:center">
+      <h3>Remote Coding</h3>
+      <p>Command AI to develop from anywhere</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>Personal Assistant</h3>
+      <p>Remembers things, manages to-dos</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>Expense Report Helper</h3>
+      <p>Auto-organize receipts, generate expense sheets</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>News & Research</h3>
+      <p>Periodic news summaries, deep research</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>Shopping</h3>
+      <p>Price comparison, product search, ordering</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>Personal Travel Agent</h3>
+      <p>Trip planning, hotel comparison, local recommendations</p>
+    </div>
+  </div>
+  <div class="highlight-box ai d3">Tip: Best video to understand Lobster — Prof. Hung-yi Lee's "Dissecting the Lobster"</div>
+  <span class="sn">17</span>
+</div>
+
+<!-- ═══ AI Evolution ═══ -->
+<div class="slide" data-slide="17">
+  <span class="label ai">AI Evolution</span>
+  <h2 class="ai d1">AI Usage Progression</h2>
+  <div class="flow ai d2" style="gap:1rem;">
+    <div class="flow-step" style="min-width:150px; padding:1.2rem 1.5rem;">
+      <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:1.5rem; color:var(--text-dim);">01</span><br>
+      <strong style="font-size:1.2rem;">AI Chat</strong><br>
+      <small>Q&A conversations</small>
+    </div>
+    <span class="flow-arr" style="font-size:1.5rem;">→</span>
+    <div class="flow-step" style="min-width:150px; padding:1.2rem 1.5rem;">
+      <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:1.5rem; color:var(--text-dim);">02</span><br>
+      <strong style="font-size:1.2rem;">AI Copilot</strong><br>
+      <small>Assisted collaboration</small>
+    </div>
+    <span class="flow-arr" style="font-size:1.5rem;">→</span>
+    <div class="flow-step" style="min-width:150px; padding:1.2rem 1.5rem;">
+      <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:1.5rem; color:var(--text-dim);">03</span><br>
+      <strong style="font-size:1.2rem;">AI Agent</strong><br>
+      <small>Autonomous execution</small>
+    </div>
+    <span class="flow-arr" style="font-size:1.5rem;">→</span>
+    <div class="flow-step" style="min-width:150px; padding:1.2rem 1.5rem; border-color:var(--primary); background:var(--primary-bg);">
+      <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:1.5rem; color:var(--primary);">04</span><br>
+      <strong style="font-size:1.2rem; color:var(--primary);">AI Agent Team</strong><br>
+      <small style="color:var(--primary);">Multi-agent collaboration</small>
+    </div>
+  </div>
+  <span class="sn">18</span>
+</div>
+
+<!-- ═══ Side Effects ═══ -->
+<div class="slide" data-slide="18">
+  <span class="label ai">Side Effects</span>
+  <h2 class="ai d1">Side Effects</h2>
+  <div class="g4 ai d2" style="max-width:88vw">
+    <div class="card" style="text-align:center">
+      <h3>Like playing video games</h3>
+      <p>Can't stop — the more I build, the more excited I get</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>Token Anxiety</h3>
+      <p>Unused tokens feel wasted — must use them all</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>AI can't be idle</h3>
+      <p>When it's idle, I get anxious</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>More ideas = more exhaustion</h3>
+      <p>The more ideas I have, the more tired I get</p>
+    </div>
+  </div>
+  <span class="sn">19</span>
+</div>
+
+<!-- ═══ Insights & Observations ═══ -->
+<div class="slide" data-slide="19">
+  <span class="label ai">Observation</span>
+  <h2 class="ai d1">Insights & Observations</h2>
+  <div class="stack ai d2">
+    <div class="step">
+      <span class="step-n">01</span>
+      <div><h3>AI is a capability multiplier</h3><p>It doesn't replace you — it amplifies what you can do</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">02</span>
+      <div><h3>The gap is not 2x — it's 10x+</h3><p>The output gap between AI users and non-users is already massive</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">03</span>
+      <div><h3>Dev cost drops dramatically</h3><p>Faster iteration, faster pivots — speed becomes the key advantage</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">04</span>
+      <div><h3>You are the bottleneck</h3><p>AI is already faster than you — the bottleneck is yourself</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">05</span>
+      <div><h3>Communication is everything</h3><p>How you talk to people & AI determines how much it can help you</p></div>
+    </div>
+  </div>
+  <div class="highlight-box ai d3" style="background:#FEF2F2; border-color:#FECACA; color:#DC2626;">Attention: Imagine everyone out there has Sharingan ｜ Beware of outsourcing your brain</div>
+  <span class="sn">20</span>
+</div>
+
+<!-- ═══ Get Started ═══ -->
+<div class="slide" data-slide="20">
+  <span class="label ai">Get Started</span>
+  <h2 class="ai d1">How to Start Building a Prototype</h2>
+  <div class="stack ai d2">
+    <div class="step">
+      <span class="step-n">01</span>
+      <div><h3>Find a problem you face right now</h3><p>Or something you keep doing repeatedly — build a prototype or solve it with AI</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">02</span>
+      <div><h3>Don't know how?</h3><p>Ask people, discuss with AI, use DeepResearch to find methods, then distill the simplest solution</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">03</span>
+      <div><h3>Recommended tools</h3>
+        <p><span style="background:#D1FAE5; color:#059669; padding:0.1rem 0.4rem; border-radius:4px; font-size:0.8rem; font-weight:600;">Easy</span> Google AI Studio (no setup needed)</p>
+        <p><span style="background:#FEF3C7; color:#D97706; padding:0.1rem 0.4rem; border-radius:4px; font-size:0.8rem; font-weight:600;">Medium</span> Google AntiGravity, OpenAI Codex</p>
+        <p><span style="background:#DBEAFE; color:#2563EB; padding:0.1rem 0.4rem; border-radius:4px; font-size:0.8rem; font-weight:600;">Dev</span> Claude Code</p>
+      </div>
+    </div>
+  </div>
+  <div class="highlight-box ai d3">Tip: Just roll up your sleeves and do it ｜ Experience it, and the knowledge is yours</div>
+  <span class="sn">21</span>
+</div>
+
+<!-- ═══ Mindset ═══ -->
+<div class="slide" data-slide="21">
+  <span class="label ai">Mindset</span>
+  <h2 class="ai d1">Dylan's Rant</h2>
+  <div class="stack ai d2">
+    <div class="step">
+      <span class="step-n" style="color:#FEE2E2">!</span>
+      <div><h3>Don't wait to be spoon-fed</h3><p>This is dangerous — time waits for no one</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">02</span>
+      <div><h3>Others can tell you what works</h3><p>But you have to get your hands dirty</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">03</span>
+      <div><h3 style="color:var(--primary)">Knowing how others use AI ≠ You can use AI</h3><p>Hands-on practice is the only path</p></div>
+    </div>
+  </div>
+  <span class="sn">22</span>
+</div>
+
+<!-- ═══ Looking Ahead ═══ -->
+<div class="slide" data-slide="22">
+  <div class="glow glow-bl"></div>
+  <div class="glow glow-tr"></div>
+  <h1 class="ai d1" style="font-size:clamp(4rem, 10vw, 8rem); letter-spacing:-0.04em;"><span class="hl">2026</span></h1>
+  <p class="sub ai d2" style="font-size:clamp(1.4rem, 2.5vw, 2rem); margin-top:0.5rem;">is a pivotal year</p>
+  <div class="divider ai d3"></div>
+  <p class="ai d4" style="font-size:clamp(1.1rem, 1.8vw, 1.4rem); color:var(--text-secondary);">Thanks to AI Agents</p>
+  <span class="sn">23</span>
+</div>
+
+<!-- ═══ End ═══ -->
+<div class="slide" data-slide="23">
+  <div class="glow glow-tr"></div>
+  <span class="badge ai">End</span>
+  <h1 class="ai d1"><span class="hl">Thank You</span></h1>
+  <p class="sub ai d2">Go Build Something</p>
+  <div class="divider ai d3"></div>
+  <p class="ai d4" style="color: var(--text-dim); font-size: 0.85rem;">Dylan</p>
+  <span class="sn">24</span>
+</div>
+
+</div>
+
+<nav class="nav" id="nav"></nav>
+<div class="kb-hint"><span class="key">&larr;</span> <span class="key">&rarr;</span> or swipe</div>
+
+<script>
+  const slides = [...document.querySelectorAll('#deck .slide')];
+  const nav = document.getElementById('nav');
+  const pb = document.getElementById('progressBar');
+  let cur = 0;
+  let locked = false;
+
+  // Build nav dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('button');
+    d.classList.add('nav-dot');
+    if (i === 0) d.classList.add('active');
+    d.addEventListener('click', () => go(i));
+    nav.appendChild(d);
+  });
+
+  function upd() { pb.style.width = ((cur + 1) / slides.length) * 100 + '%'; }
+
+  function go(i) {
+    if (i === cur || locked || i < 0 || i >= slides.length) return;
+    locked = true;
+
+    // Simply remove active from old, add to new
+    slides[cur].classList.remove('active');
+    nav.children[cur].classList.remove('active');
+
+    slides[i].classList.add('active');
+    nav.children[i].classList.add('active');
+
+    cur = i;
+    upd();
+
+    // Unlock after transition completes
+    setTimeout(() => { locked = false; }, 480);
+  }
+
+  function next() { go(cur + 1); }
+  function prev() { go(cur - 1); }
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); next(); }
+    if (['ArrowLeft','ArrowUp'].includes(e.key)) { e.preventDefault(); prev(); }
+  });
+
+  // Touch swipe
+  let tx = 0, ty = 0;
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    const dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) { dx < 0 ? next() : prev(); }
+  });
+
+  // Mouse wheel (debounced)
+  let wt;
+  document.addEventListener('wheel', e => {
+    e.preventDefault();
+    clearTimeout(wt);
+    wt = setTimeout(() => { e.deltaY > 0 ? next() : prev(); }, 80);
+  }, { passive: false });
+
+  upd();
+</script>
+
+</body>
+</html>
