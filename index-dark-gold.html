@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dylan's AI 工作流</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface-2: #1a1a1a;
+      --border: #2a2a2a;
+      --border-hover: #3d3228;
+      --text: #F5F0E8;
+      --text-secondary: #A09880;
+      --text-dim: #5A5040;
+      --primary: #D4AF37;
+      --primary-light: #F5D060;
+      --primary-bg: rgba(212,175,55,0.1);
+      --accent: #F5D060;
+      --green: #4ADE80;
+      --code-bg: #111111;
+      --code-keyword: #C9A0FF;
+      --code-string: #4ADE80;
+      --code-comment: #5A5040;
+      --code-function: #F5D060;
+      --code-prompt: #FF6B6B;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+      --radius: 16px;
+      --transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    html { font-size: 16px; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      overflow: hidden; height: 100vh; width: 100vw;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Engine ─── */
+    .deck { height: 100vh; width: 100vw; position: relative; }
+    .slide {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 2.5vh 3.5vw;
+      opacity: 0; visibility: hidden;
+      transition: opacity 0.45s ease-out;
+      pointer-events: none;
+    }
+    .slide.active { opacity: 1; visibility: visible; pointer-events: auto; }
+    .slide.left { align-items: flex-start; text-align: left; padding-left: 5vw; }
+    .slide.left h2 { text-align: left; }
+
+    /* ─── Typography ─── */
+    .sn {
+      position: absolute; top: 3vh; right: 4vw;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem; color: var(--text-dim); letter-spacing: 0.1em;
+    }
+    h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.8rem, 6vw, 5rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; text-align: center; }
+    h2 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; text-align: center; }
+    h3 { font-family: 'Playfair Display', serif; font-size: clamp(1.1rem, 1.6vw, 1.4rem); font-weight: 600; line-height: 1.4; color: var(--text); }
+    p, li { font-size: clamp(1rem, 1.4vw, 1.2rem); line-height: 1.6; color: var(--text-secondary); }
+    .sub { font-size: clamp(1.1rem, 2vw, 1.5rem); font-weight: 300; color: var(--text-secondary); margin-top: 0.75rem; }
+    .label { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--primary); margin-bottom: 0.5rem; font-weight: 500; }
+    .hl { background: linear-gradient(135deg, var(--primary), var(--primary-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .badge { display: inline-block; padding: 0.35rem 0.9rem; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); border-radius: 100px; font-size: 0.72rem; font-family: 'JetBrains Mono', monospace; color: var(--primary); letter-spacing: 0.05em; margin-bottom: 1.25rem; font-weight: 500; }
+    .divider { width: 48px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--primary), var(--primary-light)); margin: 1.25rem 0; }
+
+    /* ─── Layouts ─── */
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; width: 100%; max-width: 92vw; margin-top: 1.5rem; }
+    .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; width: 100%; max-width: 92vw; margin-top: 1.5rem; }
+    .g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; width: 100%; max-width: 92vw; margin-top: 1.5rem; }
+    .g5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; width: 100%; max-width: 92vw; margin-top: 1.5rem; }
+    .stack { display: flex; flex-direction: column; gap: 0.65rem; width: 100%; max-width: 88vw; margin-top: 1rem; }
+
+    /* ─── Cards ─── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem;
+      box-shadow: var(--shadow-sm); cursor: pointer;
+      transition: box-shadow 0.25s ease-out, border-color 0.25s ease-out, transform 0.25s ease-out;
+    }
+    .card:hover { box-shadow: var(--shadow-md); border-color: var(--border-hover); transform: translateY(-2px); }
+    .card h3 { margin-bottom: 0.4rem; }
+    .card p { font-size: 0.88rem; line-height: 1.55; }
+    .card .icon { font-family: 'Playfair Display', serif; font-size: 0.8rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem; display: block; }
+
+    /* ─── Project Card (special) ─── */
+    .proj-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem;
+      box-shadow: var(--shadow-sm); cursor: pointer;
+      transition: box-shadow 0.25s ease-out, transform 0.25s ease-out;
+      text-align: left;
+    }
+    .proj-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+    .proj-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+    .proj-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.75rem; }
+    .proj-stats { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .proj-stat {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+      color: var(--text-dim); background: var(--surface-2);
+      padding: 0.2rem 0.5rem; border-radius: 6px;
+    }
+    .proj-stat b { color: var(--text); font-weight: 600; }
+    .proj-tag {
+      display: inline-block; padding: 0.15rem 0.5rem;
+      border-radius: 6px; font-size: 0.65rem; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .tag-swift { background: rgba(217,119,6,0.15); color: #FBBF24; }
+    .tag-ts { background: rgba(96,165,250,0.15); color: #93C5FD; }
+    .tag-go { background: rgba(74,222,128,0.15); color: #4ADE80; }
+    .tag-ongoing { background: rgba(248,113,113,0.15); color: #F87171; }
+
+    /* ─── Stat big numbers ─── */
+    .stat { text-align: center; }
+    .stat .num {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 700; letter-spacing: -0.03em; line-height: 1;
+      color: var(--primary);
+    }
+    .stat .desc { margin-top: 0.4rem; font-size: 1rem; color: var(--text-secondary); }
+
+    /* ─── List ─── */
+    .mlist { list-style: none; width: 100%; max-width: 700px; }
+    .mlist li { padding: 0.8rem 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 0.85rem; font-size: 1rem; }
+    .mlist li:last-child { border-bottom: none; }
+    .mlist .dot { width: 6px; height: 6px; background: var(--primary); border-radius: 50%; flex-shrink: 0; margin-top: 0.55rem; }
+
+    /* ─── Flow ─── */
+    .flow { display: flex; align-items: center; gap: 0.6rem; margin-top: 1.5rem; flex-wrap: wrap; justify-content: center; }
+    .flow-step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 0.8rem 1.1rem;
+      font-size: 0.85rem; text-align: center; min-width: 100px;
+      box-shadow: var(--shadow-sm);
+    }
+    .flow-step small { color: var(--text-dim); font-size: 0.72rem; }
+    .flow-arr { color: var(--text-dim); font-size: 1rem; }
+
+    /* ─── Step card ─── */
+    .step {
+      display: flex; align-items: center; gap: 1.25rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .step-n { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: var(--primary); min-width: 2rem; }
+    .step h3 { font-size: 1.05rem; font-weight: 500; }
+    .step p { font-size: 0.92rem; }
+
+    /* ─── Code ─── */
+    .code-block {
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.25rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; line-height: 1.7;
+      color: var(--text-secondary); max-width: 650px; width: 100%; margin-top: 1.5rem;
+    }
+
+    /* ─── Quote ─── */
+    .quote { font-family: 'Playfair Display', serif; font-size: clamp(1.1rem, 2.2vw, 1.6rem); font-weight: 300; font-style: italic; color: var(--text-secondary); text-align: center; max-width: 650px; line-height: 1.7; }
+    .quote-author { margin-top: 1rem; font-size: 0.82rem; color: var(--text-dim); font-style: normal; }
+
+    /* ─── Glow ─── */
+    .glow { position: absolute; width: 500px; height: 500px; border-radius: 50%; pointer-events: none; opacity: 0.5; }
+    .glow-tr { top: -200px; right: -150px; background: radial-gradient(circle, rgba(212,175,55,0.04) 0%, transparent 70%); }
+    .glow-bl { bottom: -200px; left: -150px; background: radial-gradient(circle, rgba(212,175,55,0.04) 0%, transparent 70%); }
+
+    /* ─── Highlight box ─── */
+    .highlight-box {
+      background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3);
+      border-radius: 12px; padding: 1rem 1.5rem;
+      font-size: 1rem; color: var(--primary); text-align: center;
+      font-weight: 500; margin-top: 1.5rem; max-width: 600px;
+    }
+
+    /* ─── Nav ─── */
+    .nav { position: fixed; bottom: 3vh; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.4rem; z-index: 100; }
+    .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); border: none; padding: 0; transition: all 0.3s ease-out; cursor: pointer; }
+    .nav-dot.active { background: var(--primary); width: 20px; border-radius: 3px; }
+    .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--primary), var(--primary-light)); transition: width var(--transition); z-index: 100; border-radius: 0 2px 2px 0; }
+    .kb-hint { position: fixed; bottom: 1.5vh; right: 4vw; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-dim); }
+    .key { display: inline-block; padding: 0.1rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; margin: 0 0.1rem; background: var(--surface); }
+
+    /* ─── Animations ─── */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .slide.active .ai { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .slide.active .d1 { animation-delay: 0.06s; }
+    .slide.active .d2 { animation-delay: 0.12s; }
+    .slide.active .d3 { animation-delay: 0.18s; }
+    .slide.active .d4 { animation-delay: 0.24s; }
+    .slide.active .d5 { animation-delay: 0.30s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .card, .proj-card, .step, .flow-step, .nav-dot { transition: none !important; }
+      .slide.active .ai { animation: none !important; opacity: 1; transform: none; }
+    }
+    @media (max-width: 768px) {
+      .g2, .g3, .g4, .g5 { grid-template-columns: 1fr; }
+      .slide { padding: 2vh 3vw; }
+      .flow { flex-direction: column; }
+      .flow-arr { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+<div class="deck" id="deck">
+
+<!-- ═══ 01 Cover ═══ -->
+<div class="slide active" data-slide="0">
+  <div class="glow glow-tr"></div>
+  <span class="badge ai">2026 / Internal Sharing</span>
+  <h1 class="ai d1">Dylan's <span class="hl">AI 工作流</span></h1>
+  <p class="sub ai d2">如何用 AI 放大產出</p>
+  <div class="divider ai d3"></div>
+  <div class="ai d4" style="display:flex; align-items:center; gap:0.75rem;">
+    <img src="assets/profile-dylan.png" style="width:64px; height:64px; border-radius:50%; object-fit:cover; box-shadow: var(--shadow-md);" alt="Dylan">
+    <span style="color: var(--text-dim); font-size: 0.9rem;">Dylan</span>
+  </div>
+  <span class="sn">01</span>
+</div>
+
+<!-- ═══ 02 What happened in 30 days ═══ -->
+<div class="slide" data-slide="1">
+  <span class="label ai">Past 14 days</span>
+  <h2 class="ai d1">過去 14 天，<span class="hl">我做了什麼？</span></h2>
+  <div class="g3 ai d2">
+    <div class="stat">
+      <div class="num">5</div>
+      <div class="desc">Side Projects</div>
+    </div>
+    <div class="stat">
+      <div class="num">393+</div>
+      <div class="desc">Git Commits</div>
+    </div>
+    <div class="stat">
+      <div class="num">66K+</div>
+      <div class="desc">Lines of Code</div>
+    </div>
+  </div>
+  <div class="highlight-box ai d3">全部都是一個人 + AI 完成</div>
+  <span class="sn">02</span>
+</div>
+
+<!-- ═══ 03 Project Overview ═══ -->
+<div class="slide" data-slide="2">
+  <span class="label ai">Projects</span>
+  <h2 class="ai d1">五個專案，兩個禮拜</h2>
+  <div class="g5 ai d2">
+
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="proj-tag tag-swift">Swift</span>
+      </div>
+      <div class="proj-name">Easy Recording</div>
+      <div class="proj-desc">AI 會議錄音 & 逐字稿，即時轉錄 + 自動產生會議紀錄</div>
+      <div class="proj-stats">
+        <span class="proj-stat"><b>92</b>&nbsp;commits</span>
+        <span class="proj-stat"><b>4</b>&nbsp;天</span>
+        <span class="proj-stat"><b>40K</b>&nbsp;LOC</span>
+      </div>
+    </div>
+
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="proj-tag tag-swift">Swift</span>
+      </div>
+      <div class="proj-name">BlaBlaFix</div>
+      <div class="proj-desc">隱私優先的 on-device 語音輸入法，本機 Whisper + LLM 潤稿</div>
+      <div class="proj-stats">
+        <span class="proj-stat"><b>68</b>&nbsp;commits</span>
+        <span class="proj-stat"><b>7</b>&nbsp;天</span>
+        <span class="proj-stat"><b>3.7K</b>&nbsp;LOC</span>
+      </div>
+    </div>
+
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="proj-tag tag-swift">Swift</span>
+      </div>
+      <div class="proj-name">NearbySpot</div>
+      <div class="proj-desc">開車時的智慧地圖伴侶，接近景點自動語音提醒</div>
+      <div class="proj-stats">
+        <span class="proj-stat"><b>74</b>&nbsp;commits</span>
+        <span class="proj-stat"><b>5</b>&nbsp;天</span>
+        <span class="proj-stat"><b>5.8K</b>&nbsp;LOC</span>
+      </div>
+    </div>
+
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="proj-tag tag-ts">TS</span>
+        <span class="proj-tag tag-go" style="margin-left:4px">Go</span>
+      </div>
+      <div class="proj-name">ezRental</div>
+      <div class="proj-desc">AI 租屋管理系統，自動回覆租客、預約看房、LINE Bot</div>
+      <div class="proj-stats">
+        <span class="proj-stat"><b>159</b>&nbsp;commits</span>
+        <span class="proj-stat"><b>2</b>&nbsp;天</span>
+        <span class="proj-stat"><b>16K</b>&nbsp;LOC</span>
+      </div>
+    </div>
+
+    <div class="proj-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="proj-tag tag-ongoing">ONGOING</span>
+      </div>
+      <div class="proj-name">G哥</div>
+      <div class="proj-desc">Giant 百科全書大全</div>
+      <div class="proj-stats">
+        <span class="proj-stat">進行中</span>
+      </div>
+    </div>
+
+  </div>
+  <span class="sn">03</span>
+</div>
+
+<!-- ═══ 04 EasyRecording ═══ -->
+<div class="slide left" data-slide="3">
+  <span class="label ai">Project 01</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-easyrecording.png" style="width:56px; height:56px; border-radius:12px; box-shadow: var(--shadow-md);" alt="Easy Recording icon"> Easy Recording</h2>
+  <p class="sub ai d2" style="margin-top:0.5rem">macOS AI 會議錄音助手</p>
+  <div class="g2 ai d3" style="max-width:88vw">
+    <div class="card">
+      <span class="icon">功能</span>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.3rem;">
+        <li style="font-size:1rem;">系統音 + 麥克風同步錄音</li>
+        <li style="font-size:1rem;">即時語音轉文字 (AssemblyAI)</li>
+        <li style="font-size:1rem;">GPT-4.1 自動產生會議紀錄 & Action Items</li>
+        <li style="font-size:1rem;">錄音中可即時 AI 對話</li>
+        <li style="font-size:1rem;">GitHub 同步筆記</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="icon">數據</span>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+        <div class="stat"><div class="num" style="font-size:2.4rem">92</div><div class="desc">commits</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">4</div><div class="desc">天完成主系統</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">40K+</div><div class="desc">行程式碼</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">14</div><div class="desc">天持續修改</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="sn">04</span>
+</div>
+
+<!-- ═══ 05 BlaBlaFix ═══ -->
+<div class="slide left" data-slide="4">
+  <span class="label ai">Project 02</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-blablafix.png" style="width:56px; height:56px; border-radius:12px; box-shadow: var(--shadow-md);" alt="BlaBlaFix icon"> BlaBlaFix</h2>
+  <p class="sub ai d2" style="margin-top:0.5rem">隱私優先的 On-Device 語音輸入法 — 複刻 Typeless</p>
+  <div class="g2 ai d3" style="max-width:88vw">
+    <div class="card">
+      <span class="icon">功能</span>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.3rem;">
+        <li style="font-size:1rem;">本機 WhisperKit 語音辨識</li>
+        <li style="font-size:1rem;">MLX-Swift + Qwen2.5 本機潤稿</li>
+        <li style="font-size:1rem;">全程離線，資料不上傳</li>
+        <li style="font-size:1rem;">自訂快捷鍵 + 自動輸入到任何 App</li>
+        <li style="font-size:1rem;">macOS 平台</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="icon">數據</span>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+        <div class="stat"><div class="num" style="font-size:2.4rem">68</div><div class="desc">commits</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">7</div><div class="desc">天完成主系統</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">3.7K</div><div class="desc">行程式碼</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">14</div><div class="desc">天持續修改</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="sn">05</span>
+</div>
+
+<!-- ═══ 06 NearbySpot ═══ -->
+<div class="slide left" data-slide="5">
+  <span class="label ai">Project 03</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-nearbyspot.png" style="width:56px; height:56px; border-radius:12px; box-shadow: var(--shadow-md);" alt="NearbySpot icon"> NearbySpot</h2>
+  <p class="sub ai d2" style="margin-top:0.5rem">ㄟ，不要再忘記囉！</p>
+  <div class="g2 ai d3" style="max-width:88vw">
+    <div class="card">
+      <span class="icon">功能</span>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.3rem;">
+        <li style="font-size:1rem;">Google Maps 網址自動解析座標</li>
+        <li style="font-size:1rem;">地理圍欄自訂距離提醒</li>
+        <li style="font-size:1rem;">駕駛模式 (全螢幕大字)</li>
+        <li style="font-size:1rem;">完整 CI/CD 與發佈到 TestFlight</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="icon">數據</span>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+        <div class="stat"><div class="num" style="font-size:2.4rem">74</div><div class="desc">commits</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">5</div><div class="desc">天完成</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">5.8K</div><div class="desc">行程式碼</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">0</div><div class="desc">行手寫 Code</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="sn">06</span>
+</div>
+
+<!-- ═══ NearbySpot Story ═══ -->
+<div class="slide" data-slide="6">
+  <span class="label ai">NearbySpot Story</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-nearbyspot.png" style="width:48px; height:48px; border-radius:10px; box-shadow: var(--shadow-md);" alt=""> NearbySpot 的初衷</h2>
+  <p class="sub ai d2" style="margin-top:0.3rem">你有多少餐廳，永遠只存在 Bucket List 裡？</p>
+  <div class="g2 ai d3" style="max-width:92vw; margin-top:1rem; align-items:center;">
+    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+      <div class="step">
+        <span class="step-n">😩</span>
+        <div><h3>每個人都遇過的情境</h3><p>朋友推薦一間餐廳，你說「好好好」，然後存進 Google Map。但每次經過，你根本不會想起來。</p></div>
+      </div>
+      <div class="step">
+        <span class="step-n">💡</span>
+        <div><h3>好多年前就想要的 App</h3><p>經過有興趣的地方時自動通知我，不會永遠只停留在 Bucket List。</p></div>
+      </div>
+      <div class="step">
+        <span class="step-n">🔨</span>
+        <div><h3>沒人做？那就自己來！</h3><p>既然沒人做，那就自己動手吧。</p></div>
+      </div>
+      <div class="highlight-box" style="margin-top:0.25rem;">感謝 Cinna 提醒：出國超好用，把想去的店全記進去就對了！</div>
+    </div>
+    <div style="display:flex; justify-content:center;">
+      <img src="assets/nearbyspot-promo.png" style="max-height:55vh; max-width:100%; border-radius:16px; box-shadow: var(--shadow-lg); object-fit:contain;" alt="NearbySpot promo">
+    </div>
+  </div>
+  <span class="sn">07</span>
+</div>
+
+<!-- ═══ ezRental ═══ -->
+<div class="slide left" data-slide="7">
+  <span class="label ai">Project 04</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-ezrental.svg" style="width:56px; height:56px; border-radius:12px; box-shadow: var(--shadow-md);" alt="ezRental icon"> ezRental</h2>
+  <p class="sub ai d2" style="margin-top:0.5rem">AI 自動化租屋管理系統</p>
+  <div class="g2 ai d3" style="max-width:88vw">
+    <div class="card">
+      <span class="icon">功能</span>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.3rem;">
+        <li style="font-size:1rem;">AI 自動回覆租客 (LINE / Email / Web)</li>
+        <li style="font-size:1rem;">自助預約看房 + Google Calendar 同步</li>
+        <li style="font-size:1rem;">多物件管理</li>
+        <li style="font-size:1rem;">Q&A 自動學習知識庫</li>
+        <li style="font-size:1rem;">房東 CLI 管理工具</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="icon">數據</span>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+        <div class="stat"><div class="num" style="font-size:2.4rem">159</div><div class="desc">commits</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">2</div><div class="desc">天完成</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">16K</div><div class="desc">行程式碼</div></div>
+        <div class="stat"><div class="num" style="font-size:2.4rem">166</div><div class="desc">測試案例</div></div>
+      </div>
+    </div>
+  </div>
+  <span class="sn">08</span>
+</div>
+
+<!-- ═══ ezRental Story (part 1) ═══ -->
+<div class="slide left" data-slide="8">
+  <span class="label ai">ezRental Story</span>
+  <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-ezrental.svg" style="width:48px; height:48px; border-radius:10px; box-shadow: var(--shadow-md);" alt=""> ezRental 的誕生</h2>
+  <p class="sub ai d2" style="margin-top:0.5rem">一個週末，一個岳母的煩惱</p>
+  <div class="stack ai d3" style="max-width:88vw">
+    <div class="step">
+      <span class="step-n">!</span>
+      <div><h3>起因</h3><p>岳母有間房子要出租，原租客說不租了。每次把資訊放上 591租屋網，就有一大堆人加 LINE 來亂聊天，光是喬看房時間跟回答問題就痛苦不堪。</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">?</span>
+      <div><h3>兩個目標</h3><p>① 不想花時間喬預約時間 &nbsp; ② LINE 上的問題要能自動回答</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">→</span>
+      <div><h3>那就做一個吧</h3><p>「我們是不是可以做個什麼？」— 於是在一個週末，ezRental 誕生了。</p></div>
+    </div>
+  </div>
+  <span class="sn">09</span>
+</div>
+
+<!-- ═══ ezRental Story (part 2) ═══ -->
+<div class="slide" data-slide="9">
+  <span class="label ai">ezRental Story</span>
+  <h2 class="ai d1">一做就欲罷不能</h2>
+  <div class="flow ai d2">
+    <div class="flow-step">展示網頁<br><small>放房子照片</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">LINE Bot + AI<br><small>自動答客問</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">Google Calendar<br><small>自助預約看房</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">問答知識庫<br><small>自動學習</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">房源管理<br><small>多物件</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">CI/CD<br><small>自動部署</small></div>
+    <span class="flow-arr">→</span>
+    <div class="flow-step">RWD<br><small>響應式設計</small></div>
+  </div>
+  <div class="g2 ai d3" style="max-width:80vw; margin-top:1.5rem;">
+    <div class="card" style="text-align:center">
+      <div class="stat"><div class="num" style="font-size:2.4rem">&lt; 12hr</div><div class="desc">實際開發時間</div></div>
+      <p style="margin-top:0.5rem;">一個週末，一半時間在陪小孩、處理家事</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="stat"><div class="num" style="font-size:2.4rem; color: var(--accent);">😅</div><div class="desc">最尷尬的結局</div></div>
+      <p style="margin-top:0.5rem;">做完隔天，原租客說他要繼續租了</p>
+    </div>
+  </div>
+  <div class="highlight-box ai d4">系統暫時沒用到，但大家有需要的話儘管拿去用！</div>
+  <span class="sn">10</span>
+</div>
+
+<!-- ═══ 日常工作流 ═══ -->
+<div class="slide" data-slide="10">
+  <span class="label ai">Daily Workflow</span>
+  <h2 class="ai d1">日常工作流</h2>
+  <p class="sub ai d2"><span class="hl">動口不動手</span></p>
+  <div class="g2 ai d4" style="max-width:80vw">
+    <div class="card" style="text-align:center">
+      <h3>語音輸入</h3>
+      <p>用 TypeLess、BlaBlaFix 直接口述，AI 幫你潤稿輸出</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>開車時間</h3>
+      <p>ChatGPT Voice / Gemini Live 討論事情，Voice Memo 錄信件草稿</p>
+    </div>
+  </div>
+  <p class="ai d5" style="color: var(--text-dim); font-size: 0.85rem; margin-top: 1rem; font-family: 'JetBrains Mono', monospace;">說話 120–160 WPM ｜ 打字 40–60 WPM</p>
+  <span class="sn">11</span>
+</div>
+
+<!-- ═══ 09 公司雜事 ═══ -->
+<div class="slide" data-slide="11">
+  <span class="label ai">Office Work</span>
+  <h2 class="ai d1">公司雜事</h2>
+  <div class="g4 ai d2">
+    <div class="card">
+      <h3>寫信</h3>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.4rem; margin-top:0.5rem;">
+        <li style="font-size:1rem;">專用 MyGPT：針對不同對象使用不同語氣</li>
+        <li style="font-size:1rem;">培養的特定人格寫信</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Excel 地獄</h3>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.4rem; margin-top:0.5rem;">
+        <li style="font-size:1rem;">Cowork 處理報帳</li>
+        <li style="font-size:1rem;">Cowork 處理 Timesheet</li>
+        <li style="font-size:1rem;">Cowork 處理任何 Excel 的工作</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>投影片</h3>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.4rem; margin-top:0.5rem;">
+        <li style="font-size:1rem;">Claude Code 產投影片</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>會議領域</h3>
+      <ul style="list-style:none; display:flex; flex-direction:column; gap:0.4rem; margin-top:0.5rem;">
+        <li style="font-size:1rem;">Easy Recording</li>
+        <li style="font-size:1rem;">Meeting Note / 會議記錄</li>
+        <li style="font-size:1rem;">即時線上AI會議問答</li>
+      </ul>
+    </div>
+  </div>
+  <div class="highlight-box ai d3">Tips：善用各家 AI 工具的 Projects 功能，將相同主題匯聚在一起</div>
+  <span class="sn">12</span>
+</div>
+
+<!-- ═══ 10 常用工具 ═══ -->
+<div class="slide" data-slide="12">
+  <span class="label ai">Tools</span>
+  <h2 class="ai d1">常用工具</h2>
+  <div class="g2 ai d2" style="max-width:88vw">
+    <div class="card">
+      <h3>Claude Code</h3>
+      <p>本機開發主力，Terminal 多工開發流</p>
+    </div>
+    <div class="card">
+      <h3>OpenClaw (龍蝦)</h3>
+      <p>最佳個人助手</p>
+    </div>
+    <div class="card">
+      <h3>NotebookLM</h3>
+      <p>快速資料統整、最佳知識庫</p>
+      <p style="margin-top:0.4rem; color:var(--primary); font-size:0.9rem; font-weight:500;">Tip：醫療資訊管理</p>
+    </div>
+    <div class="card">
+      <h3>AI-Chat</h3>
+      <p>Claude / Gemini / ChatGPT</p>
+    </div>
+  </div>
+  <span class="sn">13</span>
+</div>
+
+<!-- ═══ 10 開發工作流 ═══ -->
+<div class="slide" data-slide="13">
+  <span class="label ai">Dev Workflow</span>
+  <h2 class="ai d1">開發工作流</h2>
+  <div class="g2 ai d2" style="max-width:88vw">
+    <div class="card">
+      <h3>多工並行</h3>
+      <ul class="mlist">
+        <li><span class="dot"></span>最多同時開發 4 個 Project</li>
+        <li><span class="dot"></span>等A做B, 等B做C, 等C做A</li>
+        <li><span class="dot"></span>Terminal工具：CMUX</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>My Tips</h3>
+      <ul class="mlist">
+        <li><span class="dot"></span>先決定技術架構</li>
+        <li><span class="dot"></span>先產生 Base Project</li>
+        <li><span class="dot"></span>先設定 CI/CD</li>
+        <li><span class="dot"></span>做完的事做成 Skill，下次直接用</li>
+        <li><span class="dot"></span>善用worktree</li>
+      </ul>
+    </div>
+  </div>
+  <span class="sn">14</span>
+</div>
+
+<!-- ═══ Bug Fix Example ═══ -->
+<div class="slide" data-slide="14">
+  <span class="label ai">Bug Fix Example</span>
+  <h2 class="ai d1">平行修 Bug — BPM 專案實例</h2>
+  <p class="sub ai d2" style="margin-top:0.3rem">多個 Bug，同時修，互不干擾</p>
+  <div class="g2 ai d3" style="max-width:90vw; margin-top:1rem;">
+
+    <div class="card" style="padding:1.25rem;">
+      <h3 style="text-align:center; margin-bottom:0.75rem;"><span style="background:rgba(212,175,55,0.15); color:#D4AF37; padding:0.2rem 0.6rem; border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:0.85rem;">GBPM-111</span></h3>
+      <div style="display:flex; flex-direction:column; gap:0.4rem;">
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem;"><code style="color:var(--primary)">claude --worktree</code> Bug-111</div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:rgba(212,175,55,0.08); border-color:rgba(212,175,55,0.3);">Worktree Hook<br><small style="color:var(--primary)">🤖 Claude 自動建立環境</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:rgba(212,175,55,0.08); border-color:rgba(212,175,55,0.3);">MCP 讀取 Bug 描述<br><small style="color:var(--primary)">🤖 Claude 自動抓 Jira</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:rgba(212,175,55,0.08); border-color:rgba(212,175,55,0.3);">Claude 修復 Bug<br><small style="color:var(--primary)">🤖 自動寫 Code + 測試</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem;">通知 Dylan<br><small>等待驗證</small></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:1.25rem;">
+      <h3 style="text-align:center; margin-bottom:0.75rem;"><span style="background:rgba(217,119,6,0.15); color:#FBBF24; padding:0.2rem 0.6rem; border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:0.85rem;">GBPM-BBB-222</span></h3>
+      <div style="display:flex; flex-direction:column; gap:0.4rem;">
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem;"><code style="color:var(--primary)">claude --worktree</code> Bug-222</div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:rgba(212,175,55,0.08); border-color:rgba(212,175,55,0.3);">Worktree Hook<br><small style="color:var(--primary)">🤖 Claude 自動建立環境</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:rgba(212,175,55,0.08); border-color:rgba(212,175,55,0.3);">MCP 讀取 Bug 描述<br><small style="color:var(--primary)">🤖 Claude 自動抓 Jira</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem; background:rgba(212,175,55,0.08); border-color:rgba(212,175,55,0.3);">Claude 修復 Bug<br><small style="color:var(--primary)">🤖 自動寫 Code + 測試</small></div>
+        <div style="text-align:center; color:var(--text-dim); font-size:0.8rem;">↓</div>
+        <div class="flow-step" style="min-width:auto; padding:0.5rem 0.8rem; font-size:0.8rem;">通知 Dylan<br><small>等待驗證</small></div>
+      </div>
+    </div>
+
+  </div>
+  <div style="display:flex; justify-content:center; margin-top:0.4rem;" class="ai d4">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:0.2rem;">
+      <div style="display:flex; gap:3rem; color:var(--text-dim); font-size:1rem;">
+        <span>↘</span><span>↙</span>
+      </div>
+      <div class="flow-step" style="min-width:220px; padding:0.6rem 1.5rem; font-size:1rem; background:var(--primary-bg); border:2px solid var(--primary); font-weight:600; color:var(--primary);">Dylan Verify</div>
+    </div>
+  </div>
+  <span class="sn">15</span>
+</div>
+
+<!-- ═══ 龍蝦 ═══ -->
+<div class="slide" data-slide="15">
+  <span class="label ai">OpenClaw</span>
+  <h2 class="ai d1">龍蝦：隨時隨地叫 AI 做事</h2>
+  <p class="sub ai d2">開車、洗澡、上廁所都能開發</p>
+  <div style="display:grid; grid-template-columns: 1fr auto; gap:1.5rem; align-items:center; max-width:92vw; margin-top:1rem;" class="ai d3">
+    <div>
+      <div class="card" style="margin-bottom:0.5rem;">
+        <h3 style="margin-bottom:0.75rem;">龍蝦開發流 (NearbySpot 實例)</h3>
+        <div class="flow" style="margin-top:0;">
+          <div class="flow-step">開車測試<br><small>發現 Bug</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">截圖<br><small>傳給龍蝦</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">龍蝦修 Code<br><small>自動 Push</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">TestFlight<br><small>新 Build</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">安裝測試<br><small>驗證修復</small></div>
+        </div>
+        <div class="highlight-box" style="margin-top:0.75rem;">從頭到尾，我都沒寫到一行 Code</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+      <img src="assets/lobster-chat.png" style="height:48vh; border-radius:12px; box-shadow:var(--shadow-lg); object-fit:contain;" alt="龍蝦對話截圖">
+      <img src="assets/lobster-testflight.png" style="height:48vh; border-radius:12px; box-shadow:var(--shadow-lg); object-fit:contain;" alt="TestFlight builds">
+    </div>
+  </div>
+  <span class="sn">16</span>
+</div>
+
+<!-- ═══ 龍蝦個人助理 ═══ -->
+<div class="slide" data-slide="16">
+  <span class="label ai">OpenClaw — Personal</span>
+  <h2 class="ai d1">龍蝦個人助理</h2>
+  <div class="g3 ai d2">
+    <div class="card" style="text-align:center">
+      <h3>遠端寫Code</h3>
+      <p>隨時隨地指揮 AI 開發</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>個人助理</h3>
+      <p>幫我記住事情、管理待辦事項</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>出差報帳助理</h3>
+      <p>自動整理收據、產出報帳表</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>新聞播報 & Research</h3>
+      <p>定期新聞摘要、深度研究</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>Shopping</h3>
+      <p>比價、找商品、下單</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>旅遊旅行社</h3>
+      <p>規劃行程、訂房比價、在地推薦</p>
+    </div>
+  </div>
+  <div class="highlight-box ai d3">Tip：瞭解龍蝦最佳影片 — 李宏毅老師的「解剖小龍蝦」</div>
+  <span class="sn">17</span>
+</div>
+
+<!-- ═══ AI 使用進程 ═══ -->
+<div class="slide" data-slide="17">
+  <span class="label ai">AI Evolution</span>
+  <h2 class="ai d1">AI 使用進程</h2>
+  <div class="flow ai d2" style="gap:1rem;">
+    <div class="flow-step" style="min-width:150px; padding:1.2rem 1.5rem;">
+      <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:1.5rem; color:var(--text-dim);">01</span><br>
+      <strong style="font-size:1.2rem;">AI Chat</strong><br>
+      <small>對話問答</small>
+    </div>
+    <span class="flow-arr" style="font-size:1.5rem;">→</span>
+    <div class="flow-step" style="min-width:150px; padding:1.2rem 1.5rem;">
+      <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:1.5rem; color:var(--text-dim);">02</span><br>
+      <strong style="font-size:1.2rem;">AI Copilot</strong><br>
+      <small>輔助協作</small>
+    </div>
+    <span class="flow-arr" style="font-size:1.5rem;">→</span>
+    <div class="flow-step" style="min-width:150px; padding:1.2rem 1.5rem;">
+      <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:1.5rem; color:var(--text-dim);">03</span><br>
+      <strong style="font-size:1.2rem;">AI Agent</strong><br>
+      <small>自主執行</small>
+    </div>
+    <span class="flow-arr" style="font-size:1.5rem;">→</span>
+    <div class="flow-step" style="min-width:150px; padding:1.2rem 1.5rem; border-color:var(--primary); background:var(--primary-bg);">
+      <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:1.5rem; color:var(--primary);">04</span><br>
+      <strong style="font-size:1.2rem; color:var(--primary);">AI Agent Team</strong><br>
+      <small style="color:var(--primary);">多 Agent 協作</small>
+    </div>
+  </div>
+  <span class="sn">18</span>
+</div>
+
+<!-- ═══ 13 後遺症 ═══ -->
+<div class="slide" data-slide="18">
+  <span class="label ai">Side Effects</span>
+  <h2 class="ai d1">後遺症</h2>
+  <div class="g4 ai d2" style="max-width:88vw">
+    <div class="card" style="text-align:center">
+      <h3>像打電動</h3>
+      <p>停不下來，越做越興奮</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>Token 焦慮</h3>
+      <p>Token 沒用完好浪費，想把 Token 都用完</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>AI 不能閒</h3>
+      <p>他閒我就焦慮</p>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>想法越多越累</h3>
+      <p>想法越多，搞得自己越累</p>
+    </div>
+  </div>
+  <span class="sn">19</span>
+</div>
+
+<!-- ═══ 觀察 ═══ -->
+<div class="slide" data-slide="19">
+  <span class="label ai">Observation</span>
+  <h2 class="ai d1">體悟 & 觀察</h2>
+  <div class="stack ai d2">
+    <div class="step">
+      <span class="step-n">01</span>
+      <div><h3>AI 是能力放大器</h3><p>不是取代你，而是讓你的能力倍數放大</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">02</span>
+      <div><h3>差距不是幾倍，是數十以上倍</h3><p>會用 AI 跟不會用 AI 的產出差距已經明顯拉開</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">05</span>
+      <div><h3>開發成本大幅降低</h3><p>能更快速試錯調整，產出速度變關鍵</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">03</span>
+      <div><h3>人是 Bottleneck</h3><p>AI 的速度早就超過你，瓶頸是你自己</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">04</span>
+      <div><h3>好好說話比什麼都重要</h3><p>你怎麼跟”人“ & AI 溝通，決定了它能幫你多少</p></div>
+    </div>
+  </div>
+  <div class="highlight-box ai d3" style="background:rgba(220,38,38,0.1); border-color:rgba(248,113,113,0.3); color:#F87171;">Attention：想像外面人人都有寫輪眼 ｜ 小心大腦外包</div>
+  <span class="sn">20</span>
+</div>
+
+<!-- ═══ 14 如何開始 ═══ -->
+<div class="slide" data-slide="20">
+  <span class="label ai">Get Started</span>
+  <h2 class="ai d1">如何開始打造 Prototype</h2>
+  <div class="stack ai d2">
+    <div class="step">
+      <span class="step-n">01</span>
+      <div><h3>找一個你現在遇到的問題</h3><p>或是一個你不停重複在做的事，直接做個 Prototype 解決它</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">02</span>
+      <div><h3>不知道怎麼做？</h3><p>問人，跟 AI 討論、用 DeepResearch 找方法，叫它給你最簡單的方法</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">03</span>
+      <div><h3>推薦工具</h3>
+        <p><span style="background:rgba(74,222,128,0.15); color:#4ADE80; padding:0.1rem 0.4rem; border-radius:4px; font-size:0.8rem; font-weight:600;">Easy</span> Google AI Studio (不用裝環境)</p>
+        <p><span style="background:rgba(217,119,6,0.15); color:#FBBF24; padding:0.1rem 0.4rem; border-radius:4px; font-size:0.8rem; font-weight:600;">Medium</span> Google AntiGravity、OpenAI Codex</p>
+        <p><span style="background:rgba(212,175,55,0.15); color:#D4AF37; padding:0.1rem 0.4rem; border-radius:4px; font-size:0.8rem; font-weight:600;">Dev</span> Claude Code</p>
+      </div>
+    </div>
+  </div>
+  <div class="highlight-box ai d3">Tip：捲起袖子做就對了 ｜ 做過，學到就是你的</div>
+  <span class="sn">21</span>
+</div>
+
+<!-- ═══ 15 心態 ═══ -->
+<div class="slide" data-slide="21">
+  <span class="label ai">Mindset</span>
+  <h2 class="ai d1">Dylan 碎碎念</h2>
+  <div class="stack ai d2">
+    <div class="step">
+      <span class="step-n" style="color:rgba(248,113,113,0.4)">!</span>
+      <div><h3>不要等別人手把手教你</h3><p>這非常危險，時間不等人</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">02</span>
+      <div><h3>別人可以告訴你什麼好用</h3><p>但你要自己下去玩</p></div>
+    </div>
+    <div class="step">
+      <span class="step-n">03</span>
+      <div><h3 style="color:var(--primary)">知道別人怎麼用 AI ≠ 你會用 AI</h3><p>實作才是唯一的路</p></div>
+    </div>
+  </div>
+  <span class="sn">22</span>
+</div>
+
+<!-- ═══ 16 放眼未來 ═══ -->
+<div class="slide" data-slide="22">
+  <div class="glow glow-bl"></div>
+  <div class="glow glow-tr"></div>
+  <h1 class="ai d1" style="font-size:clamp(4rem, 10vw, 8rem); letter-spacing:-0.04em;"><span class="hl">2026</span></h1>
+  <p class="sub ai d2" style="font-size:clamp(1.4rem, 2.5vw, 2rem); margin-top:0.5rem;">是很關鍵的一年</p>
+  <div class="divider ai d3"></div>
+  <p class="ai d4" style="font-size:clamp(1.1rem, 1.8vw, 1.4rem); color:var(--text-secondary);">拜 AI Agent 所賜</p>
+  <span class="sn">23</span>
+</div>
+
+<!-- ═══ End ═══ -->
+<div class="slide" data-slide="23">
+  <div class="glow glow-tr"></div>
+  <span class="badge ai">End</span>
+  <h1 class="ai d1"><span class="hl">謝謝大家</span></h1>
+  <p class="sub ai d2">Go Build Something</p>
+  <div class="divider ai d3"></div>
+  <p class="ai d4" style="color: var(--text-dim); font-size: 0.85rem;">Dylan</p>
+  <span class="sn">24</span>
+</div>
+
+</div>
+
+<nav class="nav" id="nav"></nav>
+<div class="kb-hint"><span class="key">&larr;</span> <span class="key">&rarr;</span> or swipe</div>
+
+<script>
+  const slides = [...document.querySelectorAll('#deck .slide')];
+  const nav = document.getElementById('nav');
+  const pb = document.getElementById('progressBar');
+  let cur = 0;
+  let locked = false;
+
+  // Build nav dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('button');
+    d.classList.add('nav-dot');
+    if (i === 0) d.classList.add('active');
+    d.addEventListener('click', () => go(i));
+    nav.appendChild(d);
+  });
+
+  function upd() { pb.style.width = ((cur + 1) / slides.length) * 100 + '%'; }
+
+  function go(i) {
+    if (i === cur || locked || i < 0 || i >= slides.length) return;
+    locked = true;
+
+    // Simply remove active from old, add to new
+    slides[cur].classList.remove('active');
+    nav.children[cur].classList.remove('active');
+
+    slides[i].classList.add('active');
+    nav.children[i].classList.add('active');
+
+    cur = i;
+    upd();
+
+    // Unlock after transition completes
+    setTimeout(() => { locked = false; }, 480);
+  }
+
+  function next() { go(cur + 1); }
+  function prev() { go(cur - 1); }
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); next(); }
+    if (['ArrowLeft','ArrowUp'].includes(e.key)) { e.preventDefault(); prev(); }
+  });
+
+  // Touch swipe
+  let tx = 0, ty = 0;
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    const dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) { dx < 0 ? next() : prev(); }
+  });
+
+  // Mouse wheel (debounced)
+  let wt;
+  document.addEventListener('wheel', e => {
+    e.preventDefault();
+    clearTimeout(wt);
+    wt = setTimeout(() => { e.deltaY > 0 ? next() : prev(); }, 80);
+  }, { passive: false });
+
+  upd();
+</script>
+
+</body>
+</html>
