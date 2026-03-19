@@ -417,25 +417,30 @@
 </div>
 
 <!-- ═══ NearbySpot Story ═══ -->
-<div class="slide left" data-slide="6">
+<div class="slide" data-slide="6">
   <span class="label ai">NearbySpot Story</span>
   <h2 class="ai d1" style="display:flex; align-items:center; gap:0.6rem;"><img src="assets/icon-nearbyspot.png" style="width:48px; height:48px; border-radius:10px; box-shadow: var(--shadow-md);" alt=""> NearbySpot 的初衷</h2>
-  <p class="sub ai d2" style="margin-top:0.5rem">你有多少餐廳，永遠只存在 Bucket List 裡？</p>
-  <div class="stack ai d3" style="max-width:88vw">
-    <div class="step">
-      <span class="step-n">😩</span>
-      <div><h3>每個人都遇過的情境</h3><p>朋友推薦一間餐廳，你說「好好好」，然後存進 Google Map。但每次經過附近，你根本不會想起來。</p></div>
+  <p class="sub ai d2" style="margin-top:0.3rem">你有多少餐廳，永遠只存在 Bucket List 裡？</p>
+  <div class="g2 ai d3" style="max-width:92vw; margin-top:1rem; align-items:center;">
+    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+      <div class="step">
+        <span class="step-n">😩</span>
+        <div><h3>每個人都遇過的情境</h3><p>朋友推薦一間餐廳，你說「好好好」，然後存進 Google Map。但每次經過，你根本不會想起來。</p></div>
+      </div>
+      <div class="step">
+        <span class="step-n">💡</span>
+        <div><h3>好多年前就想要的 App</h3><p>經過有興趣的地方時自動通知我，不會永遠只停留在 Bucket List。</p></div>
+      </div>
+      <div class="step">
+        <span class="step-n">🔨</span>
+        <div><h3>沒人做？那就自己來！</h3><p>既然沒人做，那就自己動手吧。</p></div>
+      </div>
+      <div class="highlight-box" style="margin-top:0.25rem;">感謝 Cinna 提醒：出國超好用，把想去的店全記進去就對了！</div>
     </div>
-    <div class="step">
-      <span class="step-n">💡</span>
-      <div><h3>好多年前就想要的 App</h3><p>如果經過曾經有興趣的地方，系統能自動通知我，那些餐廳就不會永遠只停留在 Bucket List 裡了。</p></div>
-    </div>
-    <div class="step">
-      <span class="step-n">🔨</span>
-      <div><h3>沒人做？那就自己來！</h3><p>不知道為什麼一直沒人做這個產品，既然沒人做，那就自己動手吧。</p></div>
+    <div style="display:flex; justify-content:center;">
+      <img src="assets/nearbyspot-promo.png" style="max-height:55vh; max-width:100%; border-radius:16px; box-shadow: var(--shadow-lg); object-fit:contain;" alt="NearbySpot promo">
     </div>
   </div>
-  <div class="highlight-box ai d4">感謝 Cinna 提醒：這適合出國用，把想去的店全記進去就對了！</div>
   <span class="sn">07</span>
 </div>
 
@@ -512,7 +517,7 @@
   <div class="g2 ai d3" style="max-width:80vw; margin-top:1.5rem;">
     <div class="card" style="text-align:center">
       <div class="stat"><div class="num" style="font-size:2.4rem">&lt; 12hr</div><div class="desc">實際開發時間</div></div>
-      <p style="margin-top:0.5rem;">一個週末，一半時間在陪小孩、處理家事</p>
+      <p style="margin-top:0.5rem;">一個週末，一半時間在陪家人</p>
     </div>
     <div class="card" style="text-align:center">
       <div class="stat"><div class="num" style="font-size:2.4rem; color: var(--accent);">😅</div><div class="desc">最尷尬的結局</div></div>
@@ -688,20 +693,28 @@
   <span class="label ai">OpenClaw</span>
   <h2 class="ai d1">龍蝦：隨時隨地叫 AI 做事</h2>
   <p class="sub ai d2">開車、洗澡、上廁所都能開發</p>
-  <div class="card ai d3" style="max-width:800px; margin-top:1.5rem;">
-    <h3 style="margin-bottom:0.75rem;">龍蝦開發流 (NearbySpot 實例)</h3>
-    <div class="flow" style="margin-top:0;">
-      <div class="flow-step">開車測試<br><small>發現 Bug</small></div>
-      <span class="flow-arr">&rarr;</span>
-      <div class="flow-step">截圖<br><small>傳給龍蝦</small></div>
-      <span class="flow-arr">&rarr;</span>
-      <div class="flow-step">龍蝦修 Code<br><small>自動 Push</small></div>
-      <span class="flow-arr">&rarr;</span>
-      <div class="flow-step">TestFlight<br><small>新 Build</small></div>
-      <span class="flow-arr">&rarr;</span>
-      <div class="flow-step">安裝測試<br><small>驗證修復</small></div>
+  <div style="display:grid; grid-template-columns: 1fr auto; gap:1.5rem; align-items:center; max-width:92vw; margin-top:1rem;" class="ai d3">
+    <div>
+      <div class="card" style="margin-bottom:0.5rem;">
+        <h3 style="margin-bottom:0.75rem;">龍蝦開發流 (NearbySpot 實例)</h3>
+        <div class="flow" style="margin-top:0;">
+          <div class="flow-step">開車測試<br><small>發現 Bug</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">截圖<br><small>傳給龍蝦</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">龍蝦修 Code<br><small>自動 Push</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">TestFlight<br><small>新 Build</small></div>
+          <span class="flow-arr">&rarr;</span>
+          <div class="flow-step">安裝測試<br><small>驗證修復</small></div>
+        </div>
+        <div class="highlight-box" style="margin-top:0.75rem;">從頭到尾，我都沒寫到一行 Code</div>
+      </div>
     </div>
-    <div class="highlight-box" style="margin-top:1rem;">從頭到尾，我都沒寫到一行 Code</div>
+    <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+      <img src="assets/lobster-chat.png" style="height:48vh; border-radius:12px; box-shadow:var(--shadow-lg); object-fit:contain;" alt="龍蝦對話截圖">
+      <img src="assets/lobster-testflight.png" style="height:48vh; border-radius:12px; box-shadow:var(--shadow-lg); object-fit:contain;" alt="TestFlight builds">
+    </div>
   </div>
   <span class="sn">16</span>
 </div>
@@ -787,7 +800,7 @@
     </div>
     <div class="card" style="text-align:center">
       <h3>AI 不能閒</h3>
-      <p>他閒我就焦慮</p>
+      <p>他閒我焦慮</p>
     </div>
     <div class="card" style="text-align:center">
       <h3>想法越多越累</h3>
