@@ -216,11 +216,123 @@
       .slide, .card, .proj-card, .step, .flow-step, .nav-dot { transition: none !important; }
       .slide.active .ai { animation: none !important; opacity: 1; transform: none; }
     }
+    /* ─── Tablet ─── */
+    @media (max-width: 1024px) {
+      .g5 { grid-template-columns: repeat(3, 1fr); }
+      .g4 { grid-template-columns: repeat(2, 1fr); }
+      .slide { padding: 2.5vh 4vw; }
+      /* P16 龍蝦：圖片縮小 */
+      img[style*="height:48vh"] { height: 35vh !important; }
+    }
+
+    /* ─── Mobile ─── */
     @media (max-width: 768px) {
-      .g2, .g3, .g4, .g5 { grid-template-columns: 1fr; }
-      .slide { padding: 2vh 3vw; }
-      .flow { flex-direction: column; }
-      .flow-arr { transform: rotate(90deg); }
+      .slide { padding: 2vh 4vw; overflow-y: auto; }
+      .slide.left { padding-left: 4vw; }
+
+      /* Grids */
+      .g2, .g3 { grid-template-columns: 1fr; }
+      .g4 { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+      .g5 { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+
+      /* Typography */
+      h1 { font-size: clamp(1.8rem, 8vw, 2.5rem); }
+      h2 { font-size: clamp(1.4rem, 6vw, 2rem); }
+      h3 { font-size: 1rem; }
+      p, li { font-size: 0.9rem; }
+      .sub { font-size: 0.95rem; }
+
+      /* Flow → vertical */
+      .flow { flex-direction: column; gap: 0.3rem; }
+      .flow-arr { transform: rotate(90deg); font-size: 0.7rem; }
+      .flow-step { min-width: auto !important; width: 100%; font-size: 0.78rem; padding: 0.45rem 0.8rem; }
+
+      /* Stats */
+      .stat .num { font-size: clamp(1.8rem, 8vw, 2.5rem); }
+      .stat .num[style*="font-size:2.4rem"] { font-size: 1.6rem !important; }
+
+      /* Cards & Steps */
+      .card { padding: 0.85rem; }
+      .proj-card { padding: 0.75rem; }
+      .proj-name { font-size: 0.95rem; }
+      .proj-desc { font-size: 0.75rem; }
+      .proj-stats { gap: 0.3rem; }
+      .proj-stat { font-size: 0.6rem; padding: 0.15rem 0.35rem; }
+      .step { padding: 0.6rem 0.85rem; gap: 0.6rem; }
+      .step-n { font-size: 1rem; min-width: 1.5rem; }
+      .highlight-box { font-size: 0.8rem; padding: 0.6rem 0.85rem; }
+
+      /* Chrome */
+      .badge { font-size: 0.6rem; padding: 0.2rem 0.5rem; }
+      .label { font-size: 0.6rem; }
+      .sn { font-size: 0.55rem; }
+      .code-block { font-size: 0.7rem; padding: 0.85rem; }
+      .nav-dot { width: 5px; height: 5px; }
+      .nav-dot.active { width: 16px; }
+      .kb-hint { display: none; }
+
+      /* P7 NearbySpot Story: stack vertically, image below */
+      .g2[style*="align-items:center"] { grid-template-columns: 1fr !important; }
+      img[style*="max-height:55vh"] { max-height: 25vh !important; }
+
+      /* P15 Bug Fix: keep 2-col for parallel visual */
+      /* (handled by .g2 → 1fr, which is fine for vertical scroll) */
+
+      /* P16 龍蝦: inline grid → single column, images side by side smaller */
+      [style*="grid-template-columns: 1fr auto"] { grid-template-columns: 1fr !important; }
+      img[style*="height:48vh"] { height: 22vh !important; }
+
+      /* P18 AI 進程: flow-step inline sizes */
+      .flow-step[style*="min-width:150px"] { min-width: auto !important; padding: 0.8rem 1rem !important; }
+      .flow-step[style*="min-width:150px"] span[style*="font-size:1.5rem"] { font-size: 1rem !important; }
+      .flow-step[style*="min-width:150px"] strong[style*="font-size:1.2rem"] { font-size: 0.95rem !important; }
+
+      /* P10 ezRental Story part 2: flow → 2-row grid instead of vertical list */
+      .slide[data-slide="9"] .flow {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        flex-direction: unset;
+        gap: 0.4rem;
+      }
+      .slide[data-slide="9"] .flow .flow-arr { display: none; }
+      .slide[data-slide="9"] .flow .flow-step { width: auto; }
+      .slide[data-slide="9"] .g2 { margin-top: 0.75rem !important; }
+      .slide[data-slide="9"] .highlight-box { margin-top: 0.5rem; }
+
+      /* P15 Bug Fix: shrink flow-steps inside cards */
+      .slide[data-slide="14"] .card { padding: 0.75rem !important; }
+      .slide[data-slide="14"] .flow-step { padding: 0.3rem 0.6rem !important; font-size: 0.7rem !important; }
+      .slide[data-slide="14"] .flow-step small { font-size: 0.6rem; }
+      .slide[data-slide="14"] h3 span { font-size: 0.7rem !important; }
+      .slide[data-slide="14"] [style*="font-size:0.8rem"] { font-size: 0.65rem !important; }
+      .slide[data-slide="14"] [style*="min-width:220px"] { min-width: 160px !important; font-size: 0.85rem !important; }
+    }
+
+    /* ─── Very small screens ─── */
+    @media (max-width: 480px) {
+      .slide { padding: 1.5vh 3vw; }
+      h1 { font-size: 1.5rem; }
+      h2 { font-size: 1.2rem; }
+      .stat .num { font-size: 1.5rem; }
+      .stat .num[style*="font-size:2.4rem"] { font-size: 1.3rem !important; }
+      .g2, .g3, .g4, .g5 { gap: 0.6rem; grid-template-columns: 1fr; }
+      .stack { gap: 0.4rem; }
+      .step { padding: 0.5rem 0.7rem; }
+      .card { padding: 0.7rem; }
+      img[style*="width:56px"] { width: 32px !important; height: 32px !important; }
+      img[style*="width:48px"] { width: 28px !important; height: 28px !important; }
+      img[style*="width:64px"] { width: 40px !important; height: 40px !important; }
+      img[style*="height:48vh"] { height: 18vh !important; }
+      img[style*="max-height:55vh"] { max-height: 20vh !important; }
+      .flow-step { padding: 0.35rem 0.6rem; font-size: 0.7rem; }
+      .highlight-box { font-size: 0.75rem; }
+
+      /* P10: 2-col grid on very small */
+      .slide[data-slide="9"] .flow { grid-template-columns: repeat(2, 1fr) !important; }
+
+      /* P15: stack to single column */
+      .slide[data-slide="14"] .g2 { grid-template-columns: 1fr !important; }
+      .slide[data-slide="14"] .flow-step { padding: 0.25rem 0.5rem !important; font-size: 0.65rem !important; }
     }
   </style>
 </head>
